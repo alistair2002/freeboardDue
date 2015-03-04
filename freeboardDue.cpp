@@ -24,11 +24,11 @@ using namespace stream_json_reader;
 
 volatile boolean execute = false;
 volatile int interval = 0;
-int inByteSerial1;
-int inByteSerial2;
-int inByteSerial3;
-int inByteSerial4;
-char input;
+// int inByteSerial1;
+// int inByteSerial2;
+// int inByteSerial3;
+// int inByteSerial4;
+//char input;
 
 
 //freeboard model
@@ -69,7 +69,90 @@ Anchor anchor(&model);
 Seatalk seatalk(&Serial2, &model);
 
 
-char inputSerialArray[100];
+/* allow a maximum of 10 buffers two for each serial port so worst case
+   there is one buffer being processed and one filled for each port */
+char sentence_pool[SENTENCE_POOL_SIZE][MAX_SENTENCE_LENGTH];
+
+typedef QueueList<char*> SentenceQueue;
+
+SentenceQueue free_queue;
+SentenceQueue proc_queue;
+
+/* this class is passed references to the two sentence pools one to claim
+   empty buffers from and one to pass them to when they are filled */
+class serialHandler {
+
+public:
+
+	serialHandler (SentenceQueue *freeQue, SentenceQueue *procQue)
+	{
+		this->freeQue = freeQue;
+		this->procQue = procQue;
+		this->fillBuffer = NULL;
+		this->fillPos = 0;
+	}
+
+	~serialHandler ()
+	{
+		if (NULL != this->fillBuffer)
+		{
+			freeQue->push(this->fillBuffer);
+			this->fillBuffer = NULL;
+		}
+		fillPos = 0;
+	}
+
+	void queueChar( char c )
+	{
+		/* bail on control characters including \n, \r etc */
+		if (('\n' == c ) or ('\r' == c ))//iscntrl(c))
+		{
+			if ((NULL != this->fillBuffer)&&
+				(0 != this->fillPos))
+			{
+				this->procQue->push(this->fillBuffer);
+				this->fillBuffer = NULL;
+				this->fillPos = 0;
+			}
+		}
+		else
+		{
+			if ((NULL == this->fillBuffer)&&
+				(NULL != this->freeQue))
+			{
+				this->fillBuffer = this->freeQue->pop();
+				this->fillPos = 0;
+			}
+			
+			if (NULL != this->fillBuffer)
+			{
+				if (MAX_SENTENCE_LENGTH > this->fillPos)
+				{
+					this->fillBuffer[this->fillPos++] = c;
+				}
+				
+				/* wrap to avoid overflow of runaway sentences */
+				if (MAX_SENTENCE_LENGTH == this->fillPos)
+				{
+					this->fillPos = 0;
+				}
+				this->fillBuffer[this->fillPos] = '\0';
+			}
+		}
+	}
+
+private:
+
+	SentenceQueue *freeQue;
+	SentenceQueue *procQue;
+
+	char 		*fillBuffer;
+	unsigned int fillPos;
+};
+
+serialHandler serial_input_1(&free_queue, &proc_queue);
+
+char inputSerialArray[MAX_SENTENCE_LENGTH];
 //char inputAutopilotArray[50];
 int inputSerialPos=0;
 //int inputAutopilotPos=0;
@@ -344,6 +427,12 @@ void process(char * s, char parser) {
 
 void setup()
 {
+	int i = 0;
+	for (i=0;i<SENTENCE_POOL_SIZE;i++)
+	{
+		free_queue.push(sentence_pool[i]);
+	}
+
 // Add your initialization code here
 	// initialize  serial ports:
 		Serial.begin(model.getSerialBaud());
@@ -423,6 +512,20 @@ void setup()
 // The loop function is called in an endless loop
 void loop()
 {
+	if (false == proc_queue.isEmpty())
+	{
+		char *sentence = proc_queue.pop();
+		if (sentence)
+		{
+			char buffer[128];
+			sprintf(buffer, "queue (%d)(%d) [%s]\n", free_queue.count(), proc_queue.count(), sentence);
+			Serial.println(buffer);
+
+			process(sentence, ',');
+			free_queue.push(sentence);
+		}
+	}
+
 //Add your repeated code here
 	if (execute) {
 			//timer ping
@@ -512,14 +615,15 @@ void serialEvent() {
 
 void serialEvent1() {
 	while (Serial1.available()) {
-		inputSerial1Complete = gps.decode(Serial1.read());
-		// read from port 1 (GPS), send to port 0:
-		if (inputSerial1Complete) {
-			//if (MUX) nmea.printNmea(gpsSource.sentence());
-			//Serial.println(gpsSource.sentence());
-			//loop every sentence
-			break;
-		}
+		serial_input_1.queueChar(Serial1.read());
+		// inputSerial1Complete = gps.decode(Serial1.read());
+		// // read from port 1 (GPS), send to port 0:
+		// if (inputSerial1Complete) {
+		// 	//if (MUX) nmea.printNmea(gpsSource.sentence());
+		// 	Serial.println(gpsSource.sentence());
+		// 	//loop every sentence
+		// 	break;
+		// }
 	}
 }
 

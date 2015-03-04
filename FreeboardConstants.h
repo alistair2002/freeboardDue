@@ -84,6 +84,10 @@
 #define  LLMTRS .00000899928
 #define  MINMTRS	LLMTRS*5.0
 
+// define the maximum expected sentence length
+#define SENTENCE_POOL_SIZE 10
+#define MAX_SENTENCE_LENGTH 100
+
 //freeboard model structs
 #define CONFIG_T 'C'
 #define DYNAMIC_T 'D' //all dynamically changing params, gps ,speed, wind, compass, etc
