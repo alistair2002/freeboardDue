@@ -31,7 +31,11 @@
 #include "Arduino.h"
 //#include <avr/pgmspace.h>
 #include <nmea.h>
-//#include <EEPROM.h>
+#ifdef ARDUINO_SAM_DUE
+#include "DueFlashStorage.h"
+#else
+#include <EEPROM.h>
+#endif
 #include "FreeboardConstants.h"
 #include "math.h"
 
@@ -224,6 +228,7 @@ private:
 	//unsigned long alarmTriggered ; //true if any alarm is triggered - derived
 	float magneticHeading;
 	float declination;
+
 	//anchor
 	struct AnchorState {
 		//float anchorRadius; //anchor alarm radius in meters

@@ -22,7 +22,7 @@
 #include "nmea.h"
 
 #define _GPRMC_TERM   "$GPRMC,"		// GPRMC datatype identifier
-#define _LIB_VERSION	1						// software version of this library
+#define _NMEA_LIB_VERSION	1						// software version of this library
 
 //
 // constructor method
@@ -247,7 +247,7 @@ float NMEA::term_decimal(int t) {
 
 int NMEA::libversion() {
 	// returns software version of this library
-  return _LIB_VERSION;
+  return _NMEA_LIB_VERSION;
 }
 
 

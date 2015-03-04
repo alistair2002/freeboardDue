@@ -272,11 +272,36 @@ int FreeBoardModel::receiveData(HardwareSerial& ser, char name) {
 	return -1;
 }
 
+#ifdef ARDUINO_SAM_DUE
+DueFlashStorage dueFlashStorage;
+
+template<class T> int EEPROM_writeAnything(int ee, T& value) 
+{
+	unsigned char* p = (unsigned char*) (void*) &value;
+	unsigned int i;
+	for (i = 0; i < sizeof(value); i++)
+	{
+		dueFlashStorage.write(ee++, *p++);
+	}
+	return i;
+}
+template<class T> int EEPROM_readAnything(int ee, T& value) 
+{
+	unsigned char* p = (unsigned char*) (void*) &value;
+	unsigned int i;
+	for (i = 0; i < sizeof(value); i++)
+	{
+		*p++ = dueFlashStorage.read(ee++);
+	}
+	return i;
+}
+#else
+
 template<class T> int EEPROM_writeAnything(int ee, T& value) {
 	unsigned char* p = (unsigned char*) (void*) &value;
 	unsigned int i;
 	for (i = 0; i < sizeof(value); i++)
-		//EEPROM.write(ee++, *p++);
+		EEPROM.write(ee++, *p++);
 	return i;
 }
 //saving
@@ -284,9 +309,11 @@ template<class T> int EEPROM_readAnything(int ee, T& value) {
 	unsigned char* p = (unsigned char*) (void*) &value;
 	unsigned int i;
 	for (i = 0; i < sizeof(value); i++)
-		//*p++ = EEPROM.read(ee++);
+		*p++ = EEPROM.read(ee++);
 	return i;
 }
+#endif
+
 void FreeBoardModel::saveConfig() {
 	//write out a current version
 	EEPROM_writeAnything(0, version);

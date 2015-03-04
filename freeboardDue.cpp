@@ -19,6 +19,7 @@
  */
 // Do not remove the include below
 #include "freeboardDue.h"
+#include "QueueList.h"
 using namespace stream_json_reader;
 
 volatile boolean execute = false;
@@ -105,6 +106,193 @@ void readWDD() {
 	wind.readWindDataDir();
 }
 
+typedef void (*nmea_process_fn)(const char *val);
+
+typedef struct {
+	const char *key;
+	const bool save;
+	const nmea_process_fn fn;
+} nmea_process_table;
+
+void proc_ANCHOR_ALARM_STATE( const char *val )
+{
+	//if (DEBUG) Serial.print("AA Entered..");
+	model.setAnchorAlarmOn(atoi(val));
+	if (atoi(val) == 1) {
+		anchor.setAnchorPoint();
+	}
+}
+
+void proc_ANCHOR_ALARM_LAT( const char *val )
+{
+	model.setAnchorLat(atof(val));
+}
+
+void proc_ANCHOR_ALARM_LON( const char *val )
+{
+	model.setAnchorLon(atof(val));
+}
+void proc_AUTOPILOT_STATE(const char *val)
+{					
+	//if (DEBUG) Serial.print("AP Entered..");
+	//if (DEBUG) Serial.println(val);
+	//this is potentailly dangerous, since we dont want the boat diving off on an old target heading.
+	//in model we ALWAYS reset to current magnetic or wind heading at this point
+	model.setAutopilotOn(atoi(val));
+}
+
+void proc_AUTOPILOT_ADJUST(const char *val)
+{
+	model.setAutopilotTargetHeading(model.getAutopilotTargetHeading() + atol(val));
+}
+
+void proc_AUTOPILOT_SOURCE(const char *val)
+{
+	model.setAutopilotReference(val[0]);
+}
+
+void proc_WIND_SPEED_ALARM_STATE(const char *val)
+{
+	model.setWindAlarmOn(atoi(val));
+}
+
+void proc_WIND_ALARM_KNOTS(const char *val)
+{
+	model.setWindAlarmSpeed(atoi(val));
+}
+
+void proc_WIND_ZERO_ADJUST(const char *val) 
+{
+	model.setWindZeroOffset(atoi(val));
+}
+
+void proc_LEVEL1_UPPER_ALARM(const char *val) 
+{
+	model.setLvl1UpperLimit(atoi(val));
+}
+
+void proc_LEVEL1_LOWER_ALARM(const char *val)
+{
+	model.setLvl1LowerLimit(atoi(val));
+}
+
+void proc_LEVEL2_UPPER_ALARM(const char *val)
+{
+	model.setLvl2UpperLimit(atoi(val));
+}
+
+void proc_LEVEL2_LOWER_ALARM(const char *val) 
+{
+	model.setLvl2LowerLimit(atoi(val));
+}
+
+void proc_LEVEL3_UPPER_ALARM(const char *val) 
+{
+	model.setLvl3UpperLimit(atoi(val));
+}
+void proc_LEVEL3_LOWER_ALARM(const char *val) 
+{
+	model.setLvl3LowerLimit(atoi(val));
+}
+
+void proc_CONFIG(const char *val) 
+{
+	//Serial.println("Sending config..");
+	model.writeConfig(Serial);
+}
+
+void proc_GPS_MODEL(const char *val) 
+{
+	model.setGpsModel(atoi(val));
+}
+
+void proc_SERIAL_BAUD0(const char *val)
+{
+	model.setSerialBaud(atol(val));
+}
+
+void proc_SERIAL_BAUD1(const char *val)
+{
+	model.setSerialBaud1(atol(val));
+}
+
+void proc_SERIAL_BAUD2(const char *val) 
+{
+	model.setSerialBaud2(atol(val));
+}
+
+void proc_SERIAL_BAUD3(const char *val) 
+{
+	model.setSerialBaud3(atol(val));
+}
+
+void proc_SEATALK(const char *val) 
+{
+	model.setSeaTalk(atoi(val));
+}
+	
+void proc_MGH(const char *val)
+{
+	model.setMagneticHeading(atof(val));
+}
+
+void proc_DECL(const char *val) 
+{
+	model.setDeclination(atof(val));
+}
+
+void proc_WDT(const char *val) 
+{
+	model.setWindTrueDir(atoi(val));
+}
+
+nmea_process_table nmea_command_process_table[] = {
+	{"#AAX", true, proc_ANCHOR_ALARM_STATE},
+	{"#AAN", true, proc_ANCHOR_ALARM_LAT},
+	{"#AAE", true, proc_ANCHOR_ALARM_LON},
+	{"#APX", false, proc_AUTOPILOT_STATE},
+	{"#APJ", false, proc_AUTOPILOT_ADJUST},
+	{"#APS", false, proc_AUTOPILOT_SOURCE},
+	{"#WSX", true, proc_WIND_SPEED_ALARM_STATE},
+	{"#WSK", true, proc_WIND_ALARM_KNOTS},
+	{"#WZJ", true, proc_WIND_ZERO_ADJUST},
+	{"#LU1", true, proc_LEVEL1_UPPER_ALARM},
+	{"#LL1", true, proc_LEVEL1_LOWER_ALARM},
+	{"#LU2", true, proc_LEVEL2_UPPER_ALARM},
+	{"#LL2", true, proc_LEVEL2_LOWER_ALARM},
+	{"#LU3", true, proc_LEVEL3_UPPER_ALARM},
+	{"#LL3", true, proc_LEVEL3_LOWER_ALARM},
+	{"#LL3", true, proc_CONFIG},
+	{"#GPS", true, proc_GPS_MODEL},
+	{"#SB0", true, proc_SERIAL_BAUD0},
+	{"#SB1", true, proc_SERIAL_BAUD1},
+	{"#SB2", true, proc_SERIAL_BAUD2},
+	{"#SB3", true, proc_SERIAL_BAUD3},
+	{"#STK", true, proc_SEATALK},
+};
+
+nmea_process_table nmea_event_process_table[] = {
+	{"MGH", true, proc_MGH},
+	{"DEC", true, proc_DECL},
+	{"WDT", true, proc_WDT},
+};
+
+/* looks up the function and returns if the change event triggers a storage event */
+bool callout_process_handler( const char *key, const char *val, nmea_process_table* table, const size_t table_size )
+{
+	size_t i = 0;
+	bool store = false;
+
+	for(i=0; i< table_size;i++)
+	{
+		if ( 0 == strcmp( key, table[i].key ))
+		{
+			table[i].fn(val);
+			break;
+		}
+	}
+	return store;
+}
 
 void process(char * s, char parser) {
 		//if (DEBUG) Serial.print("Process str:");
@@ -131,90 +319,9 @@ void process(char * s, char parser) {
 				//if (DEBUG) Serial.print(" = ");
 				//if (DEBUG) Serial.println(val);
 
-				//anchor
-				if (strcmp(key, ANCHOR_ALARM_STATE) == 0) {
-					//if (DEBUG) Serial.print("AA Entered..");
-					model.setAnchorAlarmOn(atoi(val));
-					if (atoi(val) == 1) {
-						anchor.setAnchorPoint();
-					}
-					save = true;
-				} else if (strcmp(key, ANCHOR_ALARM_ADJUST) == 0) {
-					model.setAnchorRadius(model.getAnchorRadius() + atof(val));
-					save = true;
-				} else if (strcmp(key, ANCHOR_ALARM_LAT) == 0) {
-					model.setAnchorLat(atof(val));
-					save = true;
-				} else if (strcmp(key, ANCHOR_ALARM_LON) == 0) {
-					model.setAnchorLon(atof(val));
-					save = true;
-				}
-				//autopliot
-				else if (strcmp(key, AUTOPILOT_STATE) == 0) {
-					//if (DEBUG) Serial.print("AP Entered..");
-					//if (DEBUG) Serial.println(val);
-					//this is potentailly dangerous, since we dont want the boat diving off on an old target heading.
-					//in model we ALWAYS reset to current magnetic or wind heading at this point
-					model.setAutopilotOn(atoi(val));
-				} else if (strcmp(key, AUTOPILOT_ADJUST) == 0) {
-					model.setAutopilotTargetHeading(model.getAutopilotTargetHeading() + atol(val));
-				} else if (strcmp(key, AUTOPILOT_SOURCE) == 0) {
-					model.setAutopilotReference(val[0]);
-				}
-				//wind
-				else if (strcmp(key, WIND_SPEED_ALARM_STATE) == 0) {
-					model.setWindAlarmOn(atoi(val));
-					save = true;
-				} else if (strcmp(key, WIND_ALARM_KNOTS) == 0) {
-					model.setWindAlarmSpeed(atoi(val));
-					save = true;
-				} else if (strcmp(key, WIND_ZERO_ADJUST) == 0) {
-					model.setWindZeroOffset(atoi(val));
-					save = true;
-				} else if (strcmp(key, LEVEL1_UPPER_ALARM) == 0) {
-					model.setLvl1UpperLimit(atoi(val));
-					save = true;
-				} else if (strcmp(key, LEVEL1_LOWER_ALARM) == 0) {
-					model.setLvl1LowerLimit(atoi(val));
-					save = true;
-				} else if (strcmp(key, LEVEL2_UPPER_ALARM) == 0) {
-					model.setLvl2UpperLimit(atoi(val));
-					save = true;
-				} else if (strcmp(key, LEVEL2_LOWER_ALARM) == 0) {
-					model.setLvl2LowerLimit(atoi(val));
-					save = true;
-				} else if (strcmp(key, LEVEL3_UPPER_ALARM) == 0) {
-					model.setLvl3UpperLimit(atoi(val));
-					save = true;
-				} else if (strcmp(key, LEVEL3_LOWER_ALARM) == 0) {
-					model.setLvl3LowerLimit(atoi(val));
-					save = true;
-				}else if (strcmp(key, CONFIG) == 0) {
-					//Serial.println("Sending config..");
-					model.writeConfig(Serial);
-				}
-				//gps,serial,seatalk
-				else if (strcmp(key, GPS_MODEL) == 0) {
-					model.setGpsModel(atoi(val));
-					save = true;
-				} else if (strcmp(key, SERIAL_BAUD0) == 0) {
-					model.setSerialBaud(atol(val));
-					save = true;
-				} else if (strcmp(key, SERIAL_BAUD1) == 0) {
-					model.setSerialBaud1(atol(val));
-					save = true;
-				} else if (strcmp(key, SERIAL_BAUD2) == 0) {
-					model.setSerialBaud2(atol(val));
-					save = true;
-				} else if (strcmp(key, SERIAL_BAUD3) == 0) {
-					model.setSerialBaud3(atol(val));
-					save = true;
-				} else if (strcmp(key, SEATALK) == 0) {
-					model.setSeaTalk(atoi(val));
-					save = true;
-				}
-				if (save) model.saveConfig();
+				save = callout_process_handler( key, val, nmea_command_process_table, DIM(nmea_command_process_table));
 
+				if (save) model.saveConfig();
 			} else {
 				strncpy(key, cmd, 3);
 				key[3] = '\0';
@@ -225,16 +332,8 @@ void process(char * s, char parser) {
 				//if (DEBUG) Serial.print(" = ");
 				//if (DEBUG) Serial.println(val);
 				// incoming data = WST,WSA,WDT,WDA,WSU,LAT,LON,COG,MGH,SOG,YAW
-				if (strcmp(key, MGH) == 0) {
-					model.setMagneticHeading(atof(val));
-				}
-				if (strcmp(key, DECL) == 0) {
-					model.setDeclination(atof(val));
-				}
-				if (strcmp(key, F_WDT) == 0) {
-					model.setWindTrueDir(atoi(val));
-				}
 
+				callout_process_handler( key, val, nmea_event_process_table, DIM(nmea_event_process_table));
 			}
 			//next token
 			cmd = strtok(NULL, ",");
@@ -321,6 +420,57 @@ void setup()
 }
 
 
+// The loop function is called in an endless loop
+void loop()
+{
+//Add your repeated code here
+	if (execute) {
+			//timer ping
+			//do these every 100ms
+			autopilot.calcAutoPilot();
+
+			if (interval % 2 == 0) {
+				//do every 200ms
+				wind.calcWindSpeedAndDir();
+			}
+			if (interval % 50 == 0) {
+				//do every 500ms
+				wind.calcWindSpeedAndDir();
+				wind.calcWindData();
+				//nmea.printWindNmea();
+				//fire any alarms
+				alarm.checkAlarms();
+				model.writeSimple(Serial);
+			}
+			if (interval % 100 == 0) {
+
+				//Serial.println(freeMemory());
+				//do every 1000ms
+				anchor.checkAnchor();
+				alarm.checkWindAlarm();
+				alarm.checkLvlAlarms();
+				//nmea.printTrueHeading();
+
+			}
+
+			execute = false;
+		}
+}
+
+
+byte getChecksum(char* str) {
+	byte cs = 0; //clear any old checksum
+	for (unsigned int n = 1; n < strlen(str) - 1; n++) {
+		cs ^= str[n]; //calculates the checksum
+	}
+	return cs;
+}
+
+
+
+/*********************************************************************************/
+/* want to move this to a seperate file */
+/*********************************************************************************/
 
 /*
  SerialEvent occurs whenever a new data comes in the
@@ -366,7 +516,7 @@ void serialEvent1() {
 		// read from port 1 (GPS), send to port 0:
 		if (inputSerial1Complete) {
 			//if (MUX) nmea.printNmea(gpsSource.sentence());
-			Serial.println(gpsSource.sentence());
+			//Serial.println(gpsSource.sentence());
 			//loop every sentence
 			break;
 		}
@@ -416,49 +566,4 @@ void serialEvent4() {
 			break;
 		}
 	}
-}
-// The loop function is called in an endless loop
-void loop()
-{
-//Add your repeated code here
-	if (execute) {
-			//timer ping
-			//do these every 100ms
-			autopilot.calcAutoPilot();
-
-			if (interval % 2 == 0) {
-				//do every 200ms
-				wind.calcWindSpeedAndDir();
-			}
-			if (interval % 50 == 0) {
-				//do every 500ms
-				wind.calcWindSpeedAndDir();
-				wind.calcWindData();
-				//nmea.printWindNmea();
-				//fire any alarms
-				alarm.checkAlarms();
-				model.writeSimple(Serial);
-			}
-			if (interval % 100 == 0) {
-
-				//Serial.println(freeMemory());
-				//do every 1000ms
-				anchor.checkAnchor();
-				alarm.checkWindAlarm();
-				alarm.checkLvlAlarms();
-				//nmea.printTrueHeading();
-
-			}
-
-			execute = false;
-		}
-}
-
-
-byte getChecksum(char* str) {
-	byte cs = 0; //clear any old checksum
-	for (unsigned int n = 1; n < strlen(str) - 1; n++) {
-		cs ^= str[n]; //calculates the checksum
-	}
-	return cs;
 }

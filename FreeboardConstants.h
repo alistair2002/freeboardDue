@@ -24,6 +24,9 @@
 //enable mux onto Serial.print
 #define MUX true
 
+//to determine the size of tables
+#define DIM(a) (sizeof(a)/sizeof(a[0]))
+
 //uncomment to support different GPS
 #define GPS_GENERIC 0
 #define GPS_EM_406A 1
@@ -103,7 +106,7 @@
 	/** Mag Z - heading */
 #define MGZ  "MGZ"
 	/** Mag Heading */
-#define MGH  "MGH" //navigation.headingMagnetic
+//#define MGH  "MGH" //navigation.headingMagnetic
 	/** Latitude*/
 #define LAT  "LAT" //navigation.position.latitude
 	/** Longitude*/
@@ -122,7 +125,7 @@
 	/** Time of week*/
 #define TOW  "TOW" //environmental.timeOfWeek
 	/**mag declination*/
-#define DECL  "DEC" //navigation.declination
+//#define DECL  "DEC" //navigation.declination
 	/**Wind speed apparent*/
 #define WSA  "WSA" //environmental.wind.speedApparent
 	/**Wind speed true*/
@@ -130,7 +133,7 @@
 	/**Wind dir apparent*/
 #define WDA  "WDA" //environmental.wind.directionApparent
 	/**Wind dir true*/
-#define F_WDT  "WDT" //environmental.wind.directionTrue - conflicts with Due WDT!
+//#define F_WDT  "WDT" //environmental.wind.directionTrue - conflicts with Due WDT!
 	/**Wind speed units*/
 #define WSU  "WSU"
 /**Wind alarm speed (knots) */
@@ -167,34 +170,34 @@
 
 //Commands
 #define VERSION "#VER"
-#define AUTOPILOT_STATE "#APX"
+//#define AUTOPILOT_STATE "#APX"
 #define AUTOPILOT_TARGET "#APT" //offset from source +/- deg
-#define AUTOPILOT_ADJUST "#APJ" //adjust +/- deg
-#define AUTOPILOT_SOURCE "#APS" //wind or compass
+//#define AUTOPILOT_ADJUST "#APJ" //adjust +/- deg
+//#define AUTOPILOT_SOURCE "#APS" //wind or compass
 
-#define ANCHOR_ALARM_STATE "#AAX"
+//#define ANCHOR_ALARM_STATE "#AAX"
 #define ANCHOR_ALARM_RADIUS "#AAR"
 #define ANCHOR_ALARM_ADJUST "#AAJ"
-#define ANCHOR_ALARM_LAT "#AAN"
-#define ANCHOR_ALARM_LON "#AAE"
+//#define ANCHOR_ALARM_LAT "#AAN"
+//#define ANCHOR_ALARM_LON "#AAE"
 
-#define WIND_SPEED_ALARM_STATE "#WSX"
-#define WIND_ALARM_KNOTS "#WSK"
-#define WIND_ZERO_ADJUST "#WZJ"
+//#define WIND_SPEED_ALARM_STATE "#WSX"
+//#define WIND_ALARM_KNOTS "#WSK"
+//#define WIND_ZERO_ADJUST "#WZJ"
 
-#define GPS_MODEL "#GPS"
-#define SERIAL_BAUD0 "#SB0"
-#define SERIAL_BAUD1 "#SB1"
-#define SERIAL_BAUD2 "#SB2"
-#define SERIAL_BAUD3 "#SB3"
-#define SEATALK "#STK"
+//#define GPS_MODEL "#GPS"
+/* #define SERIAL_BAUD0 "#SB0" */
+/* #define SERIAL_BAUD1 "#SB1" */
+/* #define SERIAL_BAUD2 "#SB2" */
+/* #define SERIAL_BAUD3 "#SB3" */
+/* #define SEATALK "#STK" */
 
-#define LEVEL1_UPPER_ALARM "#LU1"
-#define LEVEL2_UPPER_ALARM "#LU2"
-#define LEVEL3_UPPER_ALARM "#LU3"
-#define LEVEL1_LOWER_ALARM "#LU1"
-#define LEVEL2_LOWER_ALARM "#LU2"
-#define LEVEL3_LOWER_ALARM "#LU3"
+/* #Define LEVEL1_UPPER_ALARM "#LU1" */
+/* #define LEVEL2_UPPER_ALARM "#LU2" */
+/* #define LEVEL3_UPPER_ALARM "#LU3" */
+/* #define LEVEL1_LOWER_ALARM "#LU1" */
+/* #define LEVEL2_LOWER_ALARM "#LU2" */
+/* #define LEVEL3_LOWER_ALARM "#LU3" */
 
-#define CONFIG "#CFG"
+//#define CONFIG "#CFG"
 #endif
