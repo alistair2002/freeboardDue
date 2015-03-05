@@ -20,6 +20,8 @@
 // Do not remove the include below
 #include "freeboardDue.h"
 #include "QueueList.h"
+#include <stdbool.h>
+
 using namespace stream_json_reader;
 
 volatile boolean execute = false;
@@ -189,7 +191,7 @@ void readWDD() {
 	wind.readWindDataDir();
 }
 
-typedef void (*nmea_process_fn)(const char *val);
+typedef void (*nmea_process_fn)(const char *val, unsigned int checksum);
 
 typedef struct {
 	const char *key;
@@ -197,7 +199,7 @@ typedef struct {
 	const nmea_process_fn fn;
 } nmea_process_table;
 
-void proc_ANCHOR_ALARM_STATE( const char *val )
+void proc_ANCHOR_ALARM_STATE( const char *val, unsigned int checksum )
 {
 	//if (DEBUG) Serial.print("AA Entered..");
 	model.setAnchorAlarmOn(atoi(val));
@@ -206,16 +208,16 @@ void proc_ANCHOR_ALARM_STATE( const char *val )
 	}
 }
 
-void proc_ANCHOR_ALARM_LAT( const char *val )
+void proc_ANCHOR_ALARM_LAT( const char *val, unsigned int checksum )
 {
 	model.setAnchorLat(atof(val));
 }
 
-void proc_ANCHOR_ALARM_LON( const char *val )
+void proc_ANCHOR_ALARM_LON( const char *val, unsigned int checksum )
 {
 	model.setAnchorLon(atof(val));
 }
-void proc_AUTOPILOT_STATE(const char *val)
+void proc_AUTOPILOT_STATE(const char *val, unsigned int checksum)
 {					
 	//if (DEBUG) Serial.print("AP Entered..");
 	//if (DEBUG) Serial.println(val);
@@ -224,109 +226,115 @@ void proc_AUTOPILOT_STATE(const char *val)
 	model.setAutopilotOn(atoi(val));
 }
 
-void proc_AUTOPILOT_ADJUST(const char *val)
+void proc_AUTOPILOT_ADJUST(const char *val, unsigned int checksum)
 {
 	model.setAutopilotTargetHeading(model.getAutopilotTargetHeading() + atol(val));
 }
 
-void proc_AUTOPILOT_SOURCE(const char *val)
+void proc_AUTOPILOT_SOURCE(const char *val, unsigned int checksum)
 {
 	model.setAutopilotReference(val[0]);
 }
 
-void proc_WIND_SPEED_ALARM_STATE(const char *val)
+void proc_WIND_SPEED_ALARM_STATE(const char *val, unsigned int checksum)
 {
 	model.setWindAlarmOn(atoi(val));
 }
 
-void proc_WIND_ALARM_KNOTS(const char *val)
+void proc_WIND_ALARM_KNOTS(const char *val, unsigned int checksum)
 {
 	model.setWindAlarmSpeed(atoi(val));
 }
 
-void proc_WIND_ZERO_ADJUST(const char *val) 
+void proc_WIND_ZERO_ADJUST(const char *val, unsigned int checksum) 
 {
 	model.setWindZeroOffset(atoi(val));
 }
 
-void proc_LEVEL1_UPPER_ALARM(const char *val) 
+void proc_LEVEL1_UPPER_ALARM(const char *val, unsigned int checksum) 
 {
 	model.setLvl1UpperLimit(atoi(val));
 }
 
-void proc_LEVEL1_LOWER_ALARM(const char *val)
+void proc_LEVEL1_LOWER_ALARM(const char *val, unsigned int checksum)
 {
 	model.setLvl1LowerLimit(atoi(val));
 }
 
-void proc_LEVEL2_UPPER_ALARM(const char *val)
+void proc_LEVEL2_UPPER_ALARM(const char *val, unsigned int checksum)
 {
 	model.setLvl2UpperLimit(atoi(val));
 }
 
-void proc_LEVEL2_LOWER_ALARM(const char *val) 
+void proc_LEVEL2_LOWER_ALARM(const char *val, unsigned int checksum) 
 {
 	model.setLvl2LowerLimit(atoi(val));
 }
 
-void proc_LEVEL3_UPPER_ALARM(const char *val) 
+void proc_LEVEL3_UPPER_ALARM(const char *val, unsigned int checksum) 
 {
 	model.setLvl3UpperLimit(atoi(val));
 }
-void proc_LEVEL3_LOWER_ALARM(const char *val) 
+void proc_LEVEL3_LOWER_ALARM(const char *val, unsigned int checksum) 
 {
 	model.setLvl3LowerLimit(atoi(val));
 }
 
-void proc_CONFIG(const char *val) 
+void proc_CONFIG(const char *val, unsigned int checksum) 
 {
 	//Serial.println("Sending config..");
 	model.writeConfig(Serial);
 }
 
-void proc_GPS_MODEL(const char *val) 
+void proc_GPS_MODEL(const char *val, unsigned int checksum) 
 {
 	model.setGpsModel(atoi(val));
 }
 
-void proc_SERIAL_BAUD0(const char *val)
+void proc_SERIAL_BAUD0(const char *val, unsigned int checksum)
 {
 	model.setSerialBaud(atol(val));
 }
 
-void proc_SERIAL_BAUD1(const char *val)
+void proc_SERIAL_BAUD1(const char *val, unsigned int checksum)
 {
 	model.setSerialBaud1(atol(val));
 }
 
-void proc_SERIAL_BAUD2(const char *val) 
+void proc_SERIAL_BAUD2(const char *val, unsigned int checksum) 
 {
 	model.setSerialBaud2(atol(val));
 }
 
-void proc_SERIAL_BAUD3(const char *val) 
+void proc_SERIAL_BAUD3(const char *val, unsigned int checksum) 
 {
 	model.setSerialBaud3(atol(val));
 }
 
-void proc_SEATALK(const char *val) 
+void proc_SEATALK(const char *val, unsigned int checksum) 
 {
 	model.setSeaTalk(atoi(val));
 }
 	
-void proc_MGH(const char *val)
+void proc_MGH(const char *val, unsigned int checksum)
 {
 	model.setMagneticHeading(atof(val));
 }
 
-void proc_DECL(const char *val) 
+void proc_DECL(const char *val, unsigned int checksum) 
 {
 	model.setDeclination(atof(val));
 }
 
-void proc_WDT(const char *val) 
+void proc_WDT(const char *val, unsigned int checksum) 
 {
-	model.setWindTrueDir(atoi(val));
+	char *qual = strtok(NULL, "*");
+	char *crc = strtok(NULL, NULL);
+
+	if ((unsigned int)strtol(crc, NULL, 16) == checksum)
+	{
+		model.setWindTrueDir(atoi(val));
+	}
 }
 
 nmea_process_table nmea_command_process_table[] = {
@@ -358,10 +366,12 @@ nmea_process_table nmea_event_process_table[] = {
 	{"MGH", true, proc_MGH},
 	{"DEC", true, proc_DECL},
 	{"WDT", true, proc_WDT},
+	{"HCHDM", false, proc_WDT},
 };
 
 /* looks up the function and returns if the change event triggers a storage event */
-bool callout_process_handler( const char *key, const char *val, nmea_process_table* table, const size_t table_size )
+bool callout_process_handler( const char *key, const char *val, unsigned int checksum, 
+							  nmea_process_table* table, const size_t table_size )
 {
 	size_t i = 0;
 	bool store = false;
@@ -370,59 +380,40 @@ bool callout_process_handler( const char *key, const char *val, nmea_process_tab
 	{
 		if ( 0 == strcmp( key, table[i].key ))
 		{
-			table[i].fn(val);
+			table[i].fn(val, checksum);
 			break;
 		}
 	}
 	return store;
 }
 
-void process(char * s, char parser) {
-		//if (DEBUG) Serial.print("Process str:");
-		//if (DEBUG) Serial.println(s);
-		char *cmd = strtok(s, ",");
-		while (cmd != NULL && strlen(cmd) > 3) {
-			//starts with # its a command
-			//if (DEBUG) Serial.print("Process incoming..l=");
-			//if (DEBUG) Serial.print(strlen(cmd));
-			//if (DEBUG) Serial.print(", ");
-			//if (DEBUG) Serial.println(cmd);
+void process(char *s, char parser)
+{
+	/* calculate the checksum before we start tokenising the string */
+	unsigned int checksum = (int)getChecksum( s );
 
-			char key[5];
-			int l = strlen(cmd);
-			bool save = false;
-			if (cmd[0] == '#') {
-				//
-				strncpy(key, cmd, 4);
-				key[4] = '\0';
-				char val[l - 4];
-				memcpy(val, &cmd[5], l - 5);
-				val[l - 5] = '\0';
-				//if (DEBUG) Serial.print(key);
-				//if (DEBUG) Serial.print(" = ");
-				//if (DEBUG) Serial.println(val);
+	/* break the string down, nb strtok is not threadsafe but we dont have threads */
+	char *key = strtok(s, ",");
+	char *val = strtok(NULL, ",");
 
-				save = callout_process_handler( key, val, nmea_command_process_table, DIM(nmea_command_process_table));
+	if (key != NULL && strlen(key) > 3)
+	{
+		bool save = false;
 
-				if (save) model.saveConfig();
-			} else {
-				strncpy(key, cmd, 3);
-				key[3] = '\0';
-				char val[l - 3];
-				memcpy(val, &cmd[4], l - 4);
-				val[l - 4] = '\0';
-				//if (DEBUG) Serial.print(key);
-				//if (DEBUG) Serial.print(" = ");
-				//if (DEBUG) Serial.println(val);
-				// incoming data = WST,WSA,WDT,WDA,WSU,LAT,LON,COG,MGH,SOG,YAW
+		if (key[0] == '#') 
+		{
+			save = callout_process_handler( key + 1, val, checksum,
+											nmea_command_process_table, DIM(nmea_command_process_table));
 
-				callout_process_handler( key, val, nmea_event_process_table, DIM(nmea_event_process_table));
-			}
-			//next token
-			cmd = strtok(NULL, ",");
+			if (save) model.saveConfig();
+		} 
+		else 
+		{
+			callout_process_handler( key + 1, val, checksum,
+									 nmea_event_process_table, DIM(nmea_event_process_table));
 		}
-		//if (DEBUG) Serial.println("Process str exit");
 	}
+}
 
 
 void setup()
@@ -561,9 +552,12 @@ void loop()
 }
 
 
-byte getChecksum(char* str) {
+byte getChecksum(char* str) 
+{
 	byte cs = 0; //clear any old checksum
-	for (unsigned int n = 1; n < strlen(str) - 1; n++) {
+
+	for (unsigned int n = 1; ((n < strlen(str) - 1) && ('*' != str[n])); n++) 
+	{
 		cs ^= str[n]; //calculates the checksum
 	}
 	return cs;
