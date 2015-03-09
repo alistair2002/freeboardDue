@@ -431,7 +431,8 @@ void setup()
 
 		//start gps on serial1, autobaud
 		//if (DEBUG) Serial.println(F("Start gps.."));
-		//gps.setupGps();
+		gps.setupGps();
+
 		if (DEBUG) {
 			Serial.print("Start GPS Rx - serial1 at ");
 			Serial.println(model.getSerialBaud1());
@@ -610,14 +611,14 @@ void serialEvent() {
 void serialEvent1() {
 	while (Serial1.available()) {
 		serial_input_1.queueChar(Serial1.read());
-		// inputSerial1Complete = gps.decode(Serial1.read());
+		inputSerial1Complete = gps.decode(Serial1.read());
 		// // read from port 1 (GPS), send to port 0:
-		// if (inputSerial1Complete) {
+		if (inputSerial1Complete) {
 		// 	//if (MUX) nmea.printNmea(gpsSource.sentence());
-		// 	Serial.println(gpsSource.sentence());
+		 	Serial.println(gpsSource.sentence());
 		// 	//loop every sentence
 		// 	break;
-		// }
+		}
 	}
 }
 
