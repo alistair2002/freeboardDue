@@ -41,12 +41,19 @@
 #include "NmeaRelay.h"
 #include "Autopilot.h"
 #include "Seatalk.h"
+#include "QueueList.h"
 /*
 #include <EEPROM.h>
 
 
 #include <MemoryFree.h>
 */
+/*********************************************************************************/
+/* message system for reading data off serial ports and sending queueing it for  */
+/* parsing by the model */
+typedef QueueList<char*> SentenceQueue;
+
+/*********************************************************************************/
 
 typedef unsigned char byte;
 

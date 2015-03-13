@@ -19,23 +19,17 @@
  */
 // Do not remove the include below
 #include "freeboardDue.h"
-#include "QueueList.h"
+#include "listeners.h"
+
 #include <stdbool.h>
 
 using namespace stream_json_reader;
 
 volatile boolean execute = false;
 volatile int interval = 0;
-// int inByteSerial1;
-// int inByteSerial2;
-// int inByteSerial3;
-// int inByteSerial4;
-//char input;
-
 
 //freeboard model
 FreeBoardModel model;
-
 
 //NMEA output - The arduino puts out TTL, NMEA is RS232. They are different V and amps. The +-5V levels may need inverting or you get
 // garbage.
@@ -60,7 +54,7 @@ Wind wind(&model);
 Gps gps(&gpsSource, &model);
 
 
-MultiSerial mSerial1 = MultiSerial(CS_PIN,1); //NMEA4
+//MultiSerial mSerial1 = MultiSerial(CS_PIN,1); //NMEA4
 //Autopilot
 
 Autopilot autopilot( &model);
@@ -68,101 +62,22 @@ Autopilot autopilot( &model);
 //Anchor
 Anchor anchor(&model);
 
-Seatalk seatalk(&Serial2, &model);
-
-
+/*********************************************************************************/
+/* message queue which tales sentences from the serial ports and queues them     */
+/* for processing.  Processing updates the model by parsing these sentences      */
+/*********************************************************************************/
 /* allow a maximum of 10 buffers two for each serial port so worst case
    there is one buffer being processed and one filled for each port */
 char sentence_pool[SENTENCE_POOL_SIZE][MAX_SENTENCE_LENGTH];
 
-typedef QueueList<char*> SentenceQueue;
-
 SentenceQueue free_queue;
 SentenceQueue proc_queue;
 
-/* this class is passed references to the two sentence pools one to claim
-   empty buffers from and one to pass them to when they are filled */
-class serialHandler {
-
-public:
-
-	serialHandler (SentenceQueue *freeQue, SentenceQueue *procQue)
-	{
-		this->freeQue = freeQue;
-		this->procQue = procQue;
-		this->fillBuffer = NULL;
-		this->fillPos = 0;
-	}
-
-	~serialHandler ()
-	{
-		if (NULL != this->fillBuffer)
-		{
-			freeQue->push(this->fillBuffer);
-			this->fillBuffer = NULL;
-		}
-		fillPos = 0;
-	}
-
-	void queueChar( char c )
-	{
-		/* bail on control characters including \n, \r etc */
-		if (('\n' == c ) or ('\r' == c ))//iscntrl(c))
-		{
-			if ((NULL != this->fillBuffer)&&
-				(0 != this->fillPos))
-			{
-				this->procQue->push(this->fillBuffer);
-				this->fillBuffer = NULL;
-				this->fillPos = 0;
-			}
-		}
-		else
-		{
-			if ((NULL == this->fillBuffer)&&
-				(NULL != this->freeQue))
-			{
-				this->fillBuffer = this->freeQue->pop();
-				this->fillPos = 0;
-			}
-			
-			if (NULL != this->fillBuffer)
-			{
-				if (MAX_SENTENCE_LENGTH > this->fillPos)
-				{
-					this->fillBuffer[this->fillPos++] = c;
-				}
-				
-				/* wrap to avoid overflow of runaway sentences */
-				if (MAX_SENTENCE_LENGTH == this->fillPos)
-				{
-					this->fillPos = 0;
-				}
-				this->fillBuffer[this->fillPos] = '\0';
-			}
-		}
-	}
-
-private:
-
-	SentenceQueue *freeQue;
-	SentenceQueue *procQue;
-
-	char 		*fillBuffer;
-	unsigned int fillPos;
-};
-
+serialHandler serial_input_0(&free_queue, &proc_queue);
 serialHandler serial_input_1(&free_queue, &proc_queue);
-
-char inputSerialArray[MAX_SENTENCE_LENGTH];
-//char inputAutopilotArray[50];
-int inputSerialPos=0;
-//int inputAutopilotPos=0;
-
-boolean inputSerial1Complete = false; // whether the GPS string is complete
-boolean inputSerial2Complete = false; // whether the string is complete
-boolean inputSerial3Complete = false; // whether the string is complete
-boolean inputSerial4Complete = false; // whether the string is complete
+serialHandler serial_input_2(&free_queue, &proc_queue);
+serialHandler serial_input_3(&free_queue, &proc_queue);
+serialHandler serial_input_4(&free_queue, &proc_queue);
 
 //json support
 //{"navigation": {"position": {"longitude": "173.2" ,"latitude": "-41.5"}}}
@@ -328,7 +243,7 @@ void proc_DECL(const char *val, unsigned int checksum)
 
 void proc_WDT(const char *val, unsigned int checksum) 
 {
-	char *qual = strtok(NULL, "*");
+	//char *qual = strtok(NULL, "*");
 	char *crc = strtok(NULL, NULL);
 
 	if ((unsigned int)strtol(crc, NULL, 16) == checksum)
@@ -580,89 +495,39 @@ byte getChecksum(char* str)
  */
 void serialEvent() {
 	while (Serial.available()) {
-		// get the new byte:
-		char inChar = (char) Serial.read();
-		//try out the json reader here
-		//jsonreader.process_char(inChar);
-
-		// add it to the inputString:
-		inputSerialArray[inputSerialPos]=inChar;
-					inputSerialPos++;
-
-		if (inChar == '\n' || inChar == '\r' || inputSerialPos>98) {
-			//null to mark this array end
-			inputSerialArray[inputSerialPos]='\0';
-			process(inputSerialArray, ',');
-			//Serial.println(inputSerialArray);
-			inputSerialPos=0;
-			memset(inputSerialArray, 0, sizeof(inputSerialArray));
-			//and also dump out the json
-			//Serial.print("jsonreader.results[0] = ");
-			//Serial.println(jsonreader.results[0]);
-			//Serial.print("jsonreader.results[1] = ");
-			//Serial.println(jsonreader.results[1]);
-		}
-		//Serial.println(inputSerialArray);
-
+		serial_input_0.queueChar(Serial.read());
 	}
-
 }
 
 void serialEvent1() {
 	while (Serial1.available()) {
 		serial_input_1.queueChar(Serial1.read());
-		//inputSerial1Complete = gps.decode(Serial1.read());
-		// // read from port 1 (GPS), send to port 0:
-		//if (inputSerial1Complete) {
-		// 	//if (MUX) nmea.printNmea(gpsSource.sentence());
-		// 	Serial.println(gpsSource.sentence());
-		// 	//loop every sentence
-		// 	break;
-		//}
 	}
 }
 
 void serialEvent2() {
 	while (Serial2.available()) {
-		if (model.getSeaTalk()) {
-			//seatalk.processSeaTalkByte(Serial2.read());
-		} else {
-			inputSerial2Complete = talker2.decode(Serial2.read());
-			if (inputSerial2Complete) {
-				//if (MUX) nmea.printNmea(talker2.sentence());
-				Serial.println(talker2.sentence());
-				//loop every sentence
-				break;
-			}
-		}
+		serial_input_2.queueChar(Serial2.read());
 	}
 }
 
 void serialEvent3() {
 	while (Serial3.available()) {
-		byte b = Serial3.read();
-		Serial.println(b);
-		inputSerial3Complete = talker3.decode(b);
-		if (inputSerial3Complete) {
-			//if (MUX) nmea.printNmea(talker3.sentence());
-			Serial.println(talker3.sentence());
-			//loop every sentence
-			break;
-		}
+		serial_input_3.queueChar(Serial3.read());
 	}
 }
 
-//must call manually every loop - 3+ not in core arduino code
-void serialEvent4() {
-	while (mSerial1.available()) {
-		byte b = mSerial1.read();
-		Serial.println(b);
-		inputSerial4Complete = talker4.decode(b);
-		if (inputSerial4Complete) {
-			//if (MUX) nmea.printNmea(talker4.sentence());
-			Serial.println(talker4.sentence());
-			//loop every sentence
-			break;
-		}
-	}
-}
+// //must call manually every loop - 3+ not in core arduino code
+// void serialEvent4() {
+// 	while (mSerial1.available()) {
+// 		byte b = mSerial1.read();
+// 		Serial.println(b);
+// 		inputSerial4Complete = talker4.decode(b);
+// 		if (inputSerial4Complete) {
+// 			//if (MUX) nmea.printNmea(talker4.sentence());
+// 			Serial.println(talker4.sentence());
+// 			//loop every sentence
+// 			break;
+// 		}
+// 	}
+// }
