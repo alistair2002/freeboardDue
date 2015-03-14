@@ -31,7 +31,7 @@
 	  /* type <xsl:value-of select="@name"/> - <xsl:value-of select="@desc"/> */
 	  typedef struct {
 	  <xsl:call-template name="build_elements"/>
-	  } <xsl:value-of select="@name"/>_T
+	  } <xsl:value-of select="@name"/>;
 	</xsl:for-each>
   </xsl:template>
 
@@ -39,20 +39,69 @@
   <xsl:template name="define_structs">
 	/* nmea objects */
 	<xsl:for-each select="nmea/sentences/sentence">
-	  /* <xsl:value-of select="@type"/> - <xsl:value-of select="@desc"/> */
-	  typedef struct {
-	  <xsl:call-template name="build_elements"/>
-	  } <xsl:value-of select="@type"/>_T;
+	  <xsl:choose>
+		<xsl:when test="data">
+		  /* <xsl:value-of select="@type"/> - <xsl:value-of select="@desc"/> */
+		  typedef struct {
+		  <xsl:call-template name="build_elements"/>
+		  } <xsl:value-of select="@type"/>_T;
+		</xsl:when>
+	  </xsl:choose>
 	</xsl:for-each>
 	<xsl:text>&#10;</xsl:text>
+  </xsl:template>
+
+  <xsl:template name="define_names">
+	typedef enum {
+	<xsl:for-each select="nmea/sentences/sentence">
+	  <xsl:choose>
+		<xsl:when test="data">
+		  nmea_sentence_<xsl:value-of select="@type"/>,
+		</xsl:when>
+	  </xsl:choose>
+	</xsl:for-each>
+	} nmea_sentence_names_t;
+  </xsl:template>
+
+  <xsl:template name="define_union">
+	typedef struct {
+		nmea_sentence_names_t type;
+		union {
+		<xsl:for-each select="nmea/sentences/sentence">
+		  <xsl:choose>
+			<xsl:when test="data">
+			  <xsl:value-of select="@type"/>_T nmea_sentence_<xsl:value-of select="@type"/>_value;
+			</xsl:when>
+		  </xsl:choose>
+		</xsl:for-each>
+		};
+	} nmea_sentence_t;
   </xsl:template>
 
   <!-- main function if you like that builds the parser -->
   <xsl:template match="/">
 
-	<xsl:call-template name="define_types"/>
+<!-- dump this bit straight out -->
+<![CDATA[
+#include <stdlib.h>
+#include <stdbool.h>
 
+typedef int uint32_t;
+typedef struct {
+	char buffer[10];
+}string;
+]]>
+
+	<xsl:call-template name="define_types"/>
 	<xsl:call-template name="define_structs"/>
+	<xsl:call-template name="define_names"/>
+	<xsl:call-template name="define_union"/>
+
+<![CDATA[
+bool parse_AAM(nmea_sentence_t *ws, char *sentence);
+void parse_nmea(char *sentence);
+]]>
 
   </xsl:template>
+
 </xsl:stylesheet>
