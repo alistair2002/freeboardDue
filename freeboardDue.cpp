@@ -354,6 +354,7 @@ void setup()
 		}
 
 		Serial1.begin(model.getSerialBaud1());
+		Serial1.print("#FBO\r\n");
 
 		if (model.getSeaTalk()) {
 			if (DEBUG) Serial.println("Start seatalk - serial2 at 4800");
