@@ -19,6 +19,7 @@
 			  if (true == parsed)
 			  {
 			  	  const char *token = next;
+
 		
 				  if (token)
 				  {
@@ -53,7 +54,7 @@
 						parse_nmea_date(&amp;ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>, token);
 					  </xsl:when>
 					  <xsl:otherwise>
-						printf("unknown type <xsl:value-of select='@type'/>\n");
+						debug_printf("unknown type <xsl:value-of select='@type'/>\r\n");
 					  </xsl:otherwise>
 					</xsl:choose>
 
@@ -65,6 +66,7 @@
 				  }
 			  }
 			</xsl:for-each><!-- data -->
+				return parsed;
 			}
 		</xsl:when>
 	  </xsl:choose>
@@ -77,50 +79,49 @@
 		<xsl:when test="data">
 		  void dump_<xsl:value-of select="@type"/>(nmea_sentence_t *ws)
 		  {
-		  printf("type %d\n", ws->type);
 			<xsl:variable name="nmea_type" select="@type"/>
 			<xsl:for-each select="data">
 			  <xsl:choose>
 				<xsl:when test="@marker"/> <!-- exclude non-entities -->
 				<xsl:when test="'bool' = @type">
-				  printf("<xsl:value-of select="@name"/> = (%s)\n", 
+				  debug_printf("<xsl:value-of select="@name"/> = (%s)\r\n", 
 				  ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>?"true":"false");
 				</xsl:when>
 				<xsl:when test="'int' = @type">
-				  printf("<xsl:value-of select="@name"/> = (%i)\n", 
-				  ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>);
+				  debug_printf("<xsl:value-of select="@name"/> = (%i)\r\n", 
+				  (int)ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>);
 				</xsl:when>
 				<xsl:when test="'hex' = @type">
-				  printf("<xsl:value-of select="@name"/> = (%8.8x)\n", 
-				  ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>);
+				  debug_printf("<xsl:value-of select="@name"/> = (%8.8x)\r\n", 
+				  (int)ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>);
 				</xsl:when>
 				<xsl:when test="'float' = @type">
-				  printf("<xsl:value-of select="@name"/> = (%f)\n", 
+				  debug_printf("<xsl:value-of select="@name"/> = (%f)\r\n", 
 				  ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>);
 				</xsl:when>
 				<xsl:when test="'char' = @type">
-				  printf("<xsl:value-of select="@name"/> = (%c)\n", 
+				  debug_printf("<xsl:value-of select="@name"/> = (%c)\r\n", 
 				  ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>);
 				</xsl:when>
 				<xsl:when test="'nmea_string' = @type">
-				  printf("<xsl:value-of select="@name"/> = (%s)\n", 
+				  debug_printf("<xsl:value-of select="@name"/> = (%s)\r\n", 
 				  ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.buffer);
 				</xsl:when>
 				<xsl:when test="'nmea_time' = @type">
-				  printf("<xsl:value-of select="@name"/> = (%2.2d:%2.2d:%2.2d.%2.2d)\n", 
-				  ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.hours, 
-				  ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.minutes, 
-				  ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.seconds, 
-				  ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.centiseconds);
+				  debug_printf("<xsl:value-of select="@name"/> = (%2.2d:%2.2d:%2.2d.%2.2d)\r\n", 
+				  (int)ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.hours, 
+				  (int)ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.minutes, 
+				  (int)ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.seconds, 
+				  (int)ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.centiseconds);
 				</xsl:when>
 				<xsl:when test="'nmea_date' = @type">
-				  printf("<xsl:value-of select="@name"/> = (%2.2d/%2.2d/%2.2d)\n", 
-				  ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.day, 
-				  ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.month, 
-				  ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.year);
+				  debug_printf("<xsl:value-of select="@name"/> = (%2.2d/%2.2d/%2.2d)\r\n", 
+				  (int)ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.day, 
+				  (int)ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.month, 
+				  (int)ws->nmea_sentence_<xsl:value-of select="$nmea_type"/>_value.<xsl:value-of select="@name"/>.year);
 				</xsl:when>
 				<xsl:otherwise>
-				  printf("unknown type <xsl:value-of select='@type'/>\n");
+				  debug_printf("unknown type <xsl:value-of select='@type'/>\r\n");
 				</xsl:otherwise>
 			  </xsl:choose>
 			</xsl:for-each><!-- data -->
@@ -131,7 +132,8 @@
   </xsl:template>
 
   <xsl:template name="define_model">
-	static nmea_sentence_model_element_t nmea_model[] {
+	/* autogenerated array size plus one for the null element */
+	static nmea_sentence_model_element_t nmea_model[<xsl:value-of select="count(nmea/sentences/sentence[data])"/> + 1] {
 		{/* null element to pair with invalid enumeration */},
 	<xsl:for-each select="nmea/sentences/sentence">
 	  <xsl:choose>
@@ -153,10 +155,28 @@
 
 <!-- dump this bit straight out -->
 <![CDATA[
-#include "autogen_nmea.h"
+#ifdef ARDUINO
+#include "Arduino.h"
+#endif
+#include "autogen_nmea.xml.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+
+#define DEBUG 1
+
+#ifdef DEBUG
+#define DEBUG_PRINTF 1
+#else
+#define DEBUG_PRINTF 0
+#endif
+
+#ifdef ARDUINO
+char buffer[1024];
+#define debug_printf( args, ... ) do { if (DEBUG_PRINTF) { sprintf(buffer, args, ## __VA_ARGS__ ); Serial.print(buffer);} } while(0);
+#else
+#define debug_printf( args, ... ) do { if (DEBUG_PRINTF) printf( args, ## __VA_ARGS__ ); } while(0);
+#endif
 
 typedef bool (*nmea_parse_fn)(nmea_sentence_t* ws, const char *sentence);
 typedef void (*nmea_string_fn)(nmea_sentence_t* ws);
@@ -185,7 +205,7 @@ void parse_nmea(const char *sentence){
 
 		while (key[i] && (',' != key[i]) && ('*' != key[i])) i++;
 
-		printf("key size (%d)\n", i);
+		debug_printf("%s", sentence);
 
 		if ((key[i]) && (5 == i))
 		{
@@ -204,10 +224,10 @@ void parse_nmea(const char *sentence){
 					{
 						/* perform the magic update */
 						memcpy(&nmea_model[mdl].ws, &ws, sizeof(ws));
-
-						printf("==\n");
-
+#ifdef DEBUG
+						debug_printf("==\r\n");
 						nmea_model[mdl].to_string(&nmea_model[mdl].ws);
+#endif
 					}
 				}
 			}

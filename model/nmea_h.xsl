@@ -83,8 +83,8 @@
 <![CDATA[
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
 
-typedef int uint32_t;
 typedef struct {
 	char buffer[10];
 } nmea_string;

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "autogen_nmea.h"
+#include "autogen_nmea.xml.h"
 
 extern void parse_nmea(char *sentence);
 

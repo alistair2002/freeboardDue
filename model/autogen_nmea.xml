@@ -479,6 +479,29 @@
 	  Note: Source [MX521] describes a proprietary extension of GBS with a 9th data field. The 8-field version is in NMEA 3.0.
 	</sentence>
 	<sentence type="GGA" desc="Global Positioning System Fix Data">
+	  <data name="time" type="nmea_time" desc="Universal Time Coordinated (UTC)"/>
+	  <data name="latitude" type="float" desc="Latitude"/>
+	  <data name="hemisphere" type="char" desc="N or S (North or South)"/>
+	  <data name="longitude" type="float" desc="Longitude"/>
+	  <data name="greenwich" type="char" desc="E or W (East or West)"/>
+	  <data name="quality" type="int" desc="GPS Quality Indicator,
+									 0 - fix not available,
+									 1 - GPS fix,
+									 2 - Differential GPS fix (values above 2 are 2.3 features)
+									 3 = PPS fix
+									 4 = Real Time Kinematic
+									 5 = Float RTK
+									 6 = estimated (dead reckoning)
+									 7 = Manual input mode
+									 8 = Simulation mode"/>
+	  <data name="satillites" type="int" desc="Number of satellites in view, 00 - 12"/>
+	  <data name="dilution" type="float" desc="Horizontal Dilution of precision (meters)"/>
+	  <data name="height" type="float" desc="Antenna Altitude above/below mean-sea-level (geoid) (in meters)"/>
+	  <data name="units" type="char" desc="Units of antenna altitude, meters"/>
+	  <data name="geoidal" type="float" desc="Geoidal separation, the difference between the WGS-84 earth ellipsoid and mean-sea-level (geoid), '-' means mean-sea-level below ellipsoid"/>
+	  <data name="g_units" type="char" desc="Units of geoidal separation, meters"/>
+	  <data name="age" type="float" desc="Age of differential GPS data, time in seconds since last SC104 type 1 or 9 update, null field when DGPS is not used"/>
+	  <data name="diff" type="int" desc="Differential reference station ID, 0000-1023"/>
 
 	  Time, Position and fix related data for a GPS receiver.
 
@@ -487,55 +510,6 @@
       |         |       | |        | | |  |   |   | |   | |   |    |
 	  $--GGA,hhmmss.ss,llll.ll,a,yyyyy.yy,a,x,xx,x.x,x.x,M,x.x,M,x.x,xxxx*hh
 
-	  Field Number:
-
-      Universal Time Coordinated (UTC)
-
-      Latitude
-
-      N or S (North or South)
-
-      Longitude
-
-      E or W (East or West)
-
-      GPS Quality Indicator,
-
-      0 - fix not available,
-
-      1 - GPS fix,
-
-      2 - Differential GPS fix (values above 2 are 2.3 features)
-
-      3 = PPS fix
-
-      4 = Real Time Kinematic
-
-      5 = Float RTK
-
-      6 = estimated (dead reckoning)
-
-      7 = Manual input mode
-
-      8 = Simulation mode
-
-      Number of satellites in view, 00 - 12
-
-      Horizontal Dilution of precision (meters)
-
-      Antenna Altitude above/below mean-sea-level (geoid) (in meters)
-
-      Units of antenna altitude, meters
-
-      Geoidal separation, the difference between the WGS-84 earth ellipsoid and mean-sea-level (geoid), "-" means mean-sea-level below ellipsoid
-
-      Units of geoidal separation, meters
-
-      Age of differential GPS data, time in seconds since last SC104 type 1 or 9 update, null field when DGPS is not used
-
-      Differential reference station ID, 0000-1023
-
-      Checksum
 
 	</sentence>
 	<sentence type="GLC" desc="Geographic Position, Loran-C">

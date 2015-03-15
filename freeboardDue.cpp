@@ -20,6 +20,7 @@
 // Do not remove the include below
 #include "freeboardDue.h"
 #include "listeners.h"
+#include "autogen_nmea.xml.h"
 
 #include <stdbool.h>
 
@@ -307,16 +308,17 @@ void process(char *s, char parser)
 	/* calculate the checksum before we start tokenising the string */
 	unsigned int checksum = (int)getChecksum( s );
 
-	/* break the string down, nb strtok is not threadsafe but we dont have threads */
-	char *key = strtok(s, ",");
-	char *val = strtok(NULL, ",");
 
-	if (key != NULL && strlen(key) > 3)
+	if (s != NULL && strlen(s) > 3)
 	{
-		bool save = false;
-
-		if (key[0] == '#') 
+		if (*s == '#') 
 		{
+			bool save = false;
+
+			/* break the string down, nb strtok is not threadsafe but we dont have threads */
+			char *key = strtok(s, ",");
+			char *val = strtok(NULL, ",");
+
 			save = callout_process_handler( key + 1, val, checksum,
 											nmea_command_process_table, DIM(nmea_command_process_table));
 
@@ -324,12 +326,12 @@ void process(char *s, char parser)
 		} 
 		else 
 		{
-			callout_process_handler( key + 1, val, checksum,
-									 nmea_event_process_table, DIM(nmea_event_process_table));
+			parse_nmea(s);
+			// callout_process_handler( key + 1, val, checksum,
+			// 						 nmea_event_process_table, DIM(nmea_event_process_table));
 		}
 	}
 }
-
 
 void setup()
 {
@@ -420,15 +422,12 @@ void setup()
 // The loop function is called in an endless loop
 void loop()
 {
+	/* tickle the process queue */
 	if (false == proc_queue.isEmpty())
 	{
 		char *sentence = proc_queue.pop();
 		if (sentence)
 		{
-			char buffer[128];
-			sprintf(buffer, "queue (%d)(%d) [%s]\n", free_queue.count(), proc_queue.count(), sentence);
-			Serial.println(buffer);
-
 			process(sentence, ',');
 			free_queue.push(sentence);
 		}

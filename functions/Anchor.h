@@ -52,8 +52,6 @@ public:
 	Anchor(FreeBoardModel* model);
 	virtual ~Anchor();
 
-
-
 	void setAnchorRadius(float radius);
 	float getAnchorRadius();
 	void setAnchorPoint();
