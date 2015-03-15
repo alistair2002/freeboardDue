@@ -11,9 +11,6 @@
 	  <xsl:when test="'hex' = @type">
 		<xsl:text>uint32_t </xsl:text><xsl:value-of select="@name"/>;
 	  </xsl:when>
-	  <xsl:when test="'hex' = @type">
-		<xsl:text>uint32_t </xsl:text><xsl:value-of select="@name"/>;
-	  </xsl:when>
 	  <xsl:when test="'int' = @type">
 		<xsl:text>uint32_t </xsl:text><xsl:value-of select="@name"/>;
 	  </xsl:when>
@@ -53,6 +50,7 @@
 
   <xsl:template name="define_names">
 	typedef enum {
+		nmea_sentence_invalid,
 	<xsl:for-each select="nmea/sentences/sentence">
 	  <xsl:choose>
 		<xsl:when test="data">
@@ -89,7 +87,7 @@
 typedef int uint32_t;
 typedef struct {
 	char buffer[10];
-}string;
+} nmea_string;
 ]]>
 
 	<xsl:call-template name="define_types"/>
@@ -98,8 +96,13 @@ typedef struct {
 	<xsl:call-template name="define_union"/>
 
 <![CDATA[
-bool parse_AAM(nmea_sentence_t *ws, char *sentence);
-void parse_nmea(char *sentence);
+bool parse_AAM(nmea_sentence_t *ws, const char *sentence);
+void parse_nmea(const char *sentence);
+
+bool parse_nmea_date( nmea_date *date, const char *buffer );
+bool parse_nmea_time( nmea_time *time, const char *buffer );
+bool parse_nmea_string( nmea_string *time, const char *buffer );
+
 ]]>
 
   </xsl:template>
