@@ -20,7 +20,7 @@
 // Do not remove the include below
 #include "freeboardDue.h"
 #include "listeners.h"
-#include "autogen_nmea.xml.h"
+#include "nmea.xml.h"
 #include "Rudder.h"
 
 #include <stdbool.h>
