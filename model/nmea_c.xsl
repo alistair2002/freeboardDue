@@ -158,12 +158,12 @@
 #ifdef ARDUINO
 #include "Arduino.h"
 #endif
-#include "autogen_nmea.xml.h"
+#include "nmea.xml.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 
-#define DEBUG 1
+//#define DEBUG 1
 
 #ifdef DEBUG
 #define DEBUG_PRINTF 1
@@ -225,7 +225,7 @@ void parse_nmea(const char *sentence){
 						/* perform the magic update */
 						memcpy(&nmea_model[mdl].ws, &ws, sizeof(ws));
 #ifdef DEBUG
-						debug_printf("==\r\n");
+						debug_printf("\r\n==\r\n");
 						nmea_model[mdl].to_string(&nmea_model[mdl].ws);
 #endif
 					}

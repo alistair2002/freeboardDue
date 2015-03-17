@@ -21,6 +21,7 @@
 #include "freeboardDue.h"
 #include "listeners.h"
 #include "autogen_nmea.xml.h"
+#include "Rudder.h"
 
 #include <stdbool.h>
 
@@ -45,6 +46,26 @@ NMEARelay talker2(ALL);
 NMEARelay talker3(ALL);
 NMEARelay talker4(ALL);
 
+/*********************************************************************************/
+/* message queue which tales sentences from the serial ports and queues them     */
+/* for processing.  Processing updates the model by parsing these sentences      */
+/*********************************************************************************/
+/* allow a maximum of 10 buffers two for each serial port so worst case
+   there is one buffer being processed and one filled for each port */
+char sentence_pool[SENTENCE_POOL_SIZE][MAX_SENTENCE_LENGTH];
+
+SentenceQueue free_queue;
+SentenceQueue proc_queue;
+
+serialHandler serial_input_0(&free_queue, &proc_queue);
+serialHandler serial_input_1(&free_queue, &proc_queue);
+serialHandler serial_input_2(&free_queue, &proc_queue);
+serialHandler serial_input_3(&free_queue, &proc_queue);
+serialHandler serial_input_4(&free_queue, &proc_queue);
+
+//rudder
+Rudder rudder( &free_queue, &proc_queue );
+
 //alarm
 Alarm alarm(&model);
 
@@ -63,22 +84,6 @@ Autopilot autopilot( &model);
 //Anchor
 Anchor anchor(&model);
 
-/*********************************************************************************/
-/* message queue which tales sentences from the serial ports and queues them     */
-/* for processing.  Processing updates the model by parsing these sentences      */
-/*********************************************************************************/
-/* allow a maximum of 10 buffers two for each serial port so worst case
-   there is one buffer being processed and one filled for each port */
-char sentence_pool[SENTENCE_POOL_SIZE][MAX_SENTENCE_LENGTH];
-
-SentenceQueue free_queue;
-SentenceQueue proc_queue;
-
-serialHandler serial_input_0(&free_queue, &proc_queue);
-serialHandler serial_input_1(&free_queue, &proc_queue);
-serialHandler serial_input_2(&free_queue, &proc_queue);
-serialHandler serial_input_3(&free_queue, &proc_queue);
-serialHandler serial_input_4(&free_queue, &proc_queue);
 
 //json support
 //{"navigation": {"position": {"longitude": "173.2" ,"latitude": "-41.5"}}}
@@ -459,6 +464,7 @@ void loop()
 				anchor.checkAnchor();
 				alarm.checkWindAlarm();
 				alarm.checkLvlAlarms();
+				rudder.tick_event();
 				//nmea.printTrueHeading();
 
 			}

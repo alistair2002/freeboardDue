@@ -1,4 +1,4 @@
-#include "autogen_nmea.xml.h"
+#include "nmea.xml.h"
 #include "ctype.h"
 
 /* ddmmyy */

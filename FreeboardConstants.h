@@ -170,7 +170,7 @@
 //attached device types
 #define UID  "UID"
 #define IMU  "IMU"
-#define MEGA  "MEGA"
+//#define MEGA  "MEGA"
 
 //Commands
 #define VERSION "#VER"

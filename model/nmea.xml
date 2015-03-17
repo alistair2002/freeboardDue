@@ -1215,22 +1215,14 @@
 
 	</sentence>
 	<sentence type="RSA" desc="Rudder Sensor Angle">
+	  <data name="starboard" type="float" desc="Starboard (or single) rudder sensor, '-' means Turn To Port"/>
+	  <data name="sbd_ok" type="char" desc="Status, A means data is valid"/>
+	  <data name="port" type="float" desc="Port rudder sensor"/>
+	  <data name="port_kn" type="char" desc="Status, A means data is valid"/>
 
       1   2 3   4 5
       |   | |   | |
 	  $--RSA,x.x,A,x.x,A*hh
-
-	  Field Number:
-
-      Starboard (or single) rudder sensor, "-" means Turn To Port
-
-      Status, A means data is valid
-
-      Port rudder sensor
-
-      Status, A means data is valid
-
-      Checksum
 
 	</sentence>
 	<sentence type="RSD" desc="RADAR System Data">
