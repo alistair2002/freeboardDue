@@ -48,32 +48,14 @@
 	<xsl:text>&#10;</xsl:text>
   </xsl:template>
 
-  <xsl:template name="define_names">
-	typedef enum {
-		nmea_sentence_invalid,
+  <xsl:template name="define_getters">
 	<xsl:for-each select="nmea/sentences/sentence">
 	  <xsl:choose>
 		<xsl:when test="data">
-		  nmea_sentence_<xsl:value-of select="@type"/>,
+		  const <xsl:value-of select="@type"/>_T *get_<xsl:value-of select="@type"/>(void);
 		</xsl:when>
 	  </xsl:choose>
 	</xsl:for-each>
-	} nmea_sentence_names_t;
-  </xsl:template>
-
-  <xsl:template name="define_union">
-	typedef struct {
-		nmea_sentence_names_t type;
-		union {
-		<xsl:for-each select="nmea/sentences/sentence">
-		  <xsl:choose>
-			<xsl:when test="data">
-			  <xsl:value-of select="@type"/>_T nmea_sentence_<xsl:value-of select="@type"/>_value;
-			</xsl:when>
-		  </xsl:choose>
-		</xsl:for-each>
-		};
-	} nmea_sentence_t;
   </xsl:template>
 
   <!-- main function if you like that builds the parser -->
@@ -92,19 +74,22 @@ typedef struct {
 
 	<xsl:call-template name="define_types"/>
 	<xsl:call-template name="define_structs"/>
-	<xsl:call-template name="define_names"/>
-	<xsl:call-template name="define_union"/>
 
-<![CDATA[
-bool parse_AAM(nmea_sentence_t *ws, const char *sentence);
-void parse_nmea(const char *sentence);
 
-bool parse_nmea_date( nmea_date *date, const char *buffer );
-bool parse_nmea_time( nmea_time *time, const char *buffer );
-bool parse_nmea_string( nmea_string *time, const char *buffer );
+class Model {
 
-]]>
+public:
 
+	Model();
+	~Model();
+
+	void parse_nmea(const char *sentence);
+
+	<xsl:call-template name="define_getters"/>
+
+private:
+
+};
   </xsl:template>
 
 </xsl:stylesheet>

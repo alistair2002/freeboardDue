@@ -72,6 +72,9 @@ Alarm alarm(&model);
 //wind
 Wind wind(&model);
 
+//nmea_model
+Model nmea_model;
+
 //Gps
 Gps gps(&gpsSource, &model);
 
@@ -331,7 +334,7 @@ void process(char *s, char parser)
 		} 
 		else 
 		{
-			parse_nmea(s);
+			nmea_model.parse_nmea(s);
 			// callout_process_handler( key + 1, val, checksum,
 			// 						 nmea_event_process_table, DIM(nmea_event_process_table));
 		}
