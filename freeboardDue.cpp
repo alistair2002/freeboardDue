@@ -22,6 +22,7 @@
 #include "listeners.h"
 #include "nmea.xml.h"
 #include "Rudder.h"
+#include "Rudder_PID.h"
 
 #include <stdbool.h>
 
@@ -74,6 +75,9 @@ Wind wind(&model);
 
 //nmea_model
 Model nmea_model;
+
+// bit that trys to keep the rudder pointing at the right offset
+Rudder_PID rudder_pid( &nmea_model );
 
 //Gps
 Gps gps(&gpsSource, &model);
@@ -450,6 +454,9 @@ void loop()
 			if (interval % 2 == 0) {
 				//do every 200ms
 				wind.calcWindSpeedAndDir();
+
+				rudder.tick_event();
+				rudder_pid.tick_event();
 			}
 			if (interval % 50 == 0) {
 				//do every 500ms
@@ -458,7 +465,7 @@ void loop()
 				//nmea.printWindNmea();
 				//fire any alarms
 				alarm.checkAlarms();
-				model.writeSimple(Serial);
+				//model.writeSimple(Serial);
 			}
 			if (interval % 100 == 0) {
 
@@ -467,7 +474,6 @@ void loop()
 				anchor.checkAnchor();
 				alarm.checkWindAlarm();
 				alarm.checkLvlAlarms();
-				rudder.tick_event();
 				//nmea.printTrueHeading();
 
 			}

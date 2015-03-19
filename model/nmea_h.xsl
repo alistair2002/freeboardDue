@@ -52,7 +52,7 @@
 	<xsl:for-each select="nmea/sentences/sentence">
 	  <xsl:choose>
 		<xsl:when test="data">
-		  const <xsl:value-of select="@type"/>_T *get_<xsl:value-of select="@type"/>(void);
+		  <xsl:value-of select="@type"/>_T *get_<xsl:value-of select="@type"/>(void) const;
 		</xsl:when>
 	  </xsl:choose>
 	</xsl:for-each>
@@ -63,6 +63,9 @@
 
 <!-- dump this bit straight out -->
 <![CDATA[
+#ifndef _NMEA_MODEL_H_
+#define _NMEA_MODEL_H_
+
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -90,6 +93,8 @@ public:
 private:
 
 };
+
+#endif
   </xsl:template>
 
 </xsl:stylesheet>

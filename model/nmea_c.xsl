@@ -182,9 +182,9 @@
 	<xsl:for-each select="nmea/sentences/sentence">
 	  <xsl:choose>
 		<xsl:when test="data">
-		  const <xsl:value-of select="@type"/>_T *get_<xsl:value-of select="@type"/>(void) 
+<xsl:value-of select="@type"/>_T *Model::get_<xsl:value-of select="@type"/>(void) const
 {
- return (const <xsl:value-of select="@type"/>_T*)&amp;nmea_model[<xsl:value-of select="count()"/>].nmea_sentence_<xsl:value-of select="@type"/>_value;
+ return &amp;nmea_model[nmea_sentence_<xsl:value-of select="@type"/>].ws.nmea_sentence_<xsl:value-of select="@type"/>_value;
 }
 		</xsl:when>
 	  </xsl:choose>
@@ -245,6 +245,7 @@ typedef struct {
 	<xsl:call-template name="define_parsers"/>
 	<xsl:call-template name="define_dumpers"/>
 	<xsl:call-template name="define_model"/>
+	<xsl:call-template name="define_getters"/>
 
 <![CDATA[
 
