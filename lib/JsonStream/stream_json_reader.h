@@ -74,15 +74,15 @@ namespace stream_json_reader {
 			char* resize_string(char* string, unsigned int* size);
 			unsigned int* get_string_max_size(char* string);
 
-			unsigned int max_name_size;
 			unsigned int max_value_size;
 			unsigned int max_trace_size;
-
-			bool ignore_node; // If user don't want current node, don't read child
+			unsigned int max_name_size;
 
 			int found_results;
 			void alloc_elements();
 			void free_elements();
+
+			bool ignore_node; // If user don't want current node, don't read child
 
 			//stringutils
 			void int_to_string(int value, char* buffer);

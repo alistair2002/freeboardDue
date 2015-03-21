@@ -26,12 +26,13 @@ namespace stream_json_reader {
 									  unsigned int num_queries,
 									  unsigned int max_name_size,
 									  unsigned int max_value_size,
-									  unsigned int max_trace_size) : queries((char**)queries),
+									  unsigned int max_trace_size) :
+ 																	 realloc_increment(5),
+																	 queries((char**)queries),
 																	 num_queries(num_queries),
 																	 max_value_size(max_value_size),
 																	 max_trace_size(max_trace_size),
 																	 max_name_size(max_name_size),
-																	 realloc_increment(5),
 																	 found_results(0),
 																	 ignore_node(false){
 
@@ -382,7 +383,7 @@ namespace stream_json_reader {
 
 
 	unsigned int* StreamJsonReader::get_string_max_size(char* string){
-		unsigned int *max_size;
+		unsigned int *max_size = 0;
 		if(string==this->element_name){
 			max_size = &this->max_name_size;
 		}
