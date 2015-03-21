@@ -822,7 +822,7 @@
 	</sentence>
 	<sentence type="HDM" desc="Heading - Magnetic">
 	  <data name="heading" type="float" desc="Heading Degrees, magnetic"/>
-	  <data name="magnetic" type="char" marker="true" desc="M = magnetic"/>
+	  <data name="magnetic" type="char" desc="M = magnetic"/>
 
 	  Vessel heading in degrees with respect to magnetic north produced by any device or system producing magnetic heading.
 
