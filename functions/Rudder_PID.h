@@ -24,6 +24,9 @@
 
 #include "freeboardDue.h" /* definition of types */
 #include "nmea.xml.h"
+#include "MultiSerial.h"
+
+/* Resources: the Rudder PID uses MultiSerial port 0 */
 
 class Rudder_PID {
 
@@ -31,14 +34,20 @@ public:
 	Rudder_PID(const Model *model);
 	~Rudder_PID();
 
-	void setDesiredOffset( signed int angle );
+	void init(void);
 
+	void setDesiredOffset( signed int angle );
 	void tick_event(void);
 
 private:
 
-	signed int angle;
 	const Model *model; /* read only reference to nmea model */
+	const int baud;		/* configuration value */
+
+	MultiSerial mSerial0; //autopilot
+
+
+	signed int angle;
 
 };
 
