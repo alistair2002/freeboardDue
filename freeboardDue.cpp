@@ -86,10 +86,10 @@ Gps gps(&gpsSource, &model);
 //MultiSerial mSerial1 = MultiSerial(CS_PIN,1); //NMEA4
 //Autopilot
 
-Autopilot autopilot( &model);
+//Autopilot autopilot( &model);
 
 //Anchor
-Anchor anchor(&model);
+//Anchor anchor(&model);
 
 
 //json support
@@ -132,7 +132,7 @@ void proc_ANCHOR_ALARM_STATE( const char *val, unsigned int checksum )
 	//if (DEBUG) Serial.print("AA Entered..");
 	model.setAnchorAlarmOn(atoi(val));
 	if (atoi(val) == 1) {
-		anchor.setAnchorPoint();
+//		anchor.setAnchorPoint();
 	}
 }
 
@@ -355,79 +355,80 @@ void setup()
 
 // Add your initialization code here
 	// initialize  serial ports:
-		Serial.begin(model.getSerialBaud());
-		if (DEBUG) Serial.println("Initializing..");
+	Serial.begin(model.getSerialBaud());
+	if (DEBUG) Serial.println("Initializing..");
 
-		//start gps on serial1, autobaud
-		//if (DEBUG) Serial.println(F("Start gps.."));
-		//gps.setupGps();
+	//start gps on serial1, autobaud
+	//if (DEBUG) Serial.println(F("Start gps.."));
+	//gps.setupGps();
 
+	if (DEBUG) {
+		Serial.print("Start GPS Rx - serial1 at ");
+		Serial.println(model.getSerialBaud1());
+	}
+
+	Serial1.begin(model.getSerialBaud1());
+	Serial1.print("#FBO\r\n");
+
+	if (model.getSeaTalk()) {
+		if (DEBUG) Serial.println("Start seatalk - serial2 at 4800");
+		Serial2.begin(4800, SERIAL_9N1); //Seatalk interface
+	} else {
 		if (DEBUG) {
-			Serial.print("Start GPS Rx - serial1 at ");
-			Serial.println(model.getSerialBaud1());
+			Serial.print("Start nmea Rx - serial2 at ");
+			Serial.println(model.getSerialBaud2());
 		}
+		Serial2.begin(model.getSerialBaud2(), SERIAL_8N1);
+	}
 
-		Serial1.begin(model.getSerialBaud1());
-		Serial1.print("#FBO\r\n");
+	if (DEBUG) {
+		Serial.print("Start nmea Rx - serial3 at ");
+		Serial.println(model.getSerialBaud3());
+	}
+	Serial3.begin(model.getSerialBaud3(), SERIAL_8N1); //talker2
 
-		if (model.getSeaTalk()) {
-			if (DEBUG) Serial.println("Start seatalk - serial2 at 4800");
-			Serial2.begin(4800, SERIAL_9N1); //Seatalk interface
-		} else {
-			if (DEBUG) {
-				Serial.print("Start nmea Rx - serial2 at ");
-				Serial.println(model.getSerialBaud2());
-			}
-			Serial2.begin(model.getSerialBaud2(), SERIAL_8N1);
-		}
+	if (DEBUG) Serial.println("Start SPI uarts..");
+	delay(1000);
+	pinMode(CS_PIN, OUTPUT);
+	Serial.println("CS_PIN set to OUTPUT");
+	delay(100);
+	//Clear Chip Select
+	digitalWrite(CS_PIN,HIGH);
+	Serial.println("CS_PIN OUTPUT = HIGH");
 
-		if (DEBUG) {
-			Serial.print("Start nmea Rx - serial3 at ");
-			Serial.println(model.getSerialBaud3());
-		}
-		Serial3.begin(model.getSerialBaud3(), SERIAL_8N1); //talker2
+	if (DEBUG) {
+		Serial.print("Start nmea Rx - serial4 at ");
+		Serial.println(model.getSerialBaud4());
+	}
+	//mSerial1.begin(model.getSerialBaud4()); //talker3
+	delay(100);
+	if (DEBUG) Serial.println("Start nmea Tx..");
+	pinMode(nmeaRxPin, INPUT);
+	pinMode(nmeaTxPin, OUTPUT);
+	if (DEBUG) {
+		Serial.print("Start nmea Tx - on pins 46 Tx, 48 Rx at ");
+		Serial.println(model.getSerialBaud5());
+	}
+	//nmea.begin(model.getSerialBaud5());
 
-		if (DEBUG) Serial.println("Start SPI uarts..");
-			delay(1000);
-			pinMode(CS_PIN, OUTPUT);
-			Serial.println("CS_PIN set to OUTPUT");
-			delay(100);
-			//Clear Chip Select
-			digitalWrite(CS_PIN,HIGH);
-			Serial.println("CS_PIN OUTPUT = HIGH");
+//		autopilot.init();
+	rudder_pid.init();
 
-		if (DEBUG) {
-				Serial.print("Start nmea Rx - serial4 at ");
-				Serial.println(model.getSerialBaud4());
-			}
-		//mSerial1.begin(model.getSerialBaud4()); //talker3
-		delay(100);
-		if (DEBUG) Serial.println("Start nmea Tx..");
-			pinMode(nmeaRxPin, INPUT);
-			pinMode(nmeaTxPin, OUTPUT);
-			if (DEBUG) {
-				Serial.print("Start nmea Tx - on pins 46 Tx, 48 Rx at ");
-				Serial.println(model.getSerialBaud5());
-			}
-		//nmea.begin(model.getSerialBaud5());
-
-		autopilot.init();
-
-		//setup interrupts to windPins
-		if (DEBUG) Serial.println("Start wind..");
-		pinMode(windSpeedPin, INPUT);
-		//digitalWrite (windSpeedPin, HIGH) ;
-		attachInterrupt(windSpeedInterrupt, readWDS, RISING);
-		pinMode(windDirPin, INPUT);
-		//digitalWrite (windDirPin, HIGH) ;
-		attachInterrupt(windDirInterrupt, readWDD, RISING);
+	//setup interrupts to windPins
+	if (DEBUG) Serial.println("Start wind..");
+	pinMode(windSpeedPin, INPUT);
+	//digitalWrite (windSpeedPin, HIGH) ;
+	attachInterrupt(windSpeedInterrupt, readWDS, RISING);
+	pinMode(windDirPin, INPUT);
+	//digitalWrite (windDirPin, HIGH) ;
+	attachInterrupt(windDirInterrupt, readWDD, RISING);
 
 	//	//setup timers
-		if (DEBUG) Serial.println("Start timer..");
-		Timer.getAvailable().attachInterrupt(calculate).start(100000);
+	if (DEBUG) Serial.println("Start timer..");
+	Timer.getAvailable().attachInterrupt(calculate).start(100000);
 
 
-		if (DEBUG) Serial.println("Setup complete..");
+	if (DEBUG) Serial.println("Setup complete..");
 }
 
 
@@ -449,7 +450,7 @@ void loop()
 	if (execute) {
 			//timer ping
 			//do these every 100ms
-			autopilot.calcAutoPilot();
+//			autopilot.calcAutoPilot();
 
 			if (interval % 2 == 0) {
 				//do every 200ms
@@ -471,7 +472,7 @@ void loop()
 
 				//Serial.println(freeMemory());
 				//do every 1000ms
-				anchor.checkAnchor();
+//				anchor.checkAnchor();
 				alarm.checkWindAlarm();
 				alarm.checkLvlAlarms();
 				//nmea.printTrueHeading();
