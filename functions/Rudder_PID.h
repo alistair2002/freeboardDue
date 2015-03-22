@@ -25,6 +25,7 @@
 #include "freeboardDue.h" /* definition of types */
 #include "nmea.xml.h"
 #include "MultiSerial.h"
+#include "PID_v1.h"
 
 /* Resources: the Rudder PID uses MultiSerial port 0 */
 
@@ -34,21 +35,24 @@ public:
 	Rudder_PID(const Model *model);
 	~Rudder_PID();
 
-	void init(void);
+	void init(void);		// to start the serial once the hardware is up
 
 	void setDesiredOffset( signed int angle );
 	void tick_event(void);
+	void speed_test_event(void);
 
 private:
 
-	const Model *model; /* read only reference to nmea model */
-	const int baud;		/* configuration value */
+	const Model *model;		// read only reference to nmea model
+	const int baud;			// configuration value
 
-	MultiSerial mSerial0; //autopilot
+	unsigned int test_state;
+	unsigned int test_time;
 
+	MultiSerial mSerial0;	//autopilot
 
-	signed int angle;
-
+	double input, output, setpoint;	// the values tracked by the PID algorithm
+	PID correction;			// the PID algorithm that does fancy phase lock loop stuff
 };
 
 #endif

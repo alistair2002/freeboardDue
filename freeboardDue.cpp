@@ -369,6 +369,7 @@ void setup()
 
 	Serial1.begin(model.getSerialBaud1());
 	Serial1.print("#FBO\r\n");
+//	Serial1.print("#GPX\r\n");
 
 	if (model.getSeaTalk()) {
 		if (DEBUG) Serial.println("Start seatalk - serial2 at 4800");
@@ -451,13 +452,14 @@ void loop()
 			//timer ping
 			//do these every 100ms
 //			autopilot.calcAutoPilot();
-
 			if (interval % 2 == 0) {
 				//do every 200ms
 				wind.calcWindSpeedAndDir();
 
 				rudder.tick_event();
-				rudder_pid.tick_event();
+//				rudder_pid.tick_event();
+				rudder_pid.speed_test_event();
+
 			}
 			if (interval % 50 == 0) {
 				//do every 500ms

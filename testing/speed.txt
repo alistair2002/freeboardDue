@@ -1,0 +1,12 @@
+test 1 -127 time 8398 rudder 37.000000
+test 2 127 time 8988 rudder -23.000000
+test 3 -112 time 8788 rudder 37.000000
+test 4 112 time 9588 rudder -23.000000
+test 5 -96 time 10188 rudder 37.000000
+test 6 96 time 10588 rudder -23.000000
+test 7 -80 time 11587 rudder 37.000000
+test 8 80 time 12388 rudder -23.000000
+test 9 -64 time 14987 rudder 37.000000
+test 10 64 time 15188 rudder -23.000000
+test 11 -48 time 19387 rudder 36.000000
+test 12 48 time 19987 rudder -23.000000
