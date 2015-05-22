@@ -1,4 +1,4 @@
 
 PORT := ttyACM0
 
-ARDUINO_ROOT := /home/jason/dev/arduino-1.5.8
+ARDUINO_ROOT := /home/jason/dev/arduino-1.6.1

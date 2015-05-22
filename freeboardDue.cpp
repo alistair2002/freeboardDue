@@ -20,7 +20,7 @@
 // Do not remove the include below
 #include "freeboardDue.h"
 #include "listeners.h"
-#include "nmea.xml.h"
+#include "nmea_model.h"
 #include "Rudder.h"
 #include "Rudder_PID.h"
 
@@ -371,6 +371,7 @@ void setup()
 	Serial1.print("#FBO\r\n");
 //	Serial1.print("#GPX\r\n");
 
+#ifdef seatalk
 	if (model.getSeaTalk()) {
 		if (DEBUG) Serial.println("Start seatalk - serial2 at 4800");
 		Serial2.begin(4800, SERIAL_9N1); //Seatalk interface
@@ -381,7 +382,8 @@ void setup()
 		}
 		Serial2.begin(model.getSerialBaud2(), SERIAL_8N1);
 	}
-
+#endif
+	
 	if (DEBUG) {
 		Serial.print("Start nmea Rx - serial3 at ");
 		Serial.println(model.getSerialBaud3());

@@ -199,7 +199,7 @@
 #ifdef ARDUINO
 #include "Arduino.h"
 #endif
-#include "nmea.xml.h"
+#include "nmea_model.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>

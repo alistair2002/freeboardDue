@@ -23,11 +23,14 @@
 #define RUDDER_PID_H_
 
 #include "freeboardDue.h" /* definition of types */
-#include "nmea.xml.h"
+#include "nmea_model.h"
 #include "MultiSerial.h"
 #include "PID_v1.h"
 
 /* Resources: the Rudder PID uses MultiSerial port 0 */
+#ifndef _NMEA_MODEL_H_
+#error nmea not defined
+#endif
 
 class Rudder_PID {
 
