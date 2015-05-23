@@ -23,6 +23,7 @@
 #include "nmea_model.h"
 #include "Rudder.h"
 #include "Rudder_PID.h"
+#include "SegDisp.h"
 
 #include <stdbool.h>
 
@@ -82,6 +83,8 @@ Rudder_PID rudder_pid( &nmea_model );
 //Gps
 Gps gps(&gpsSource, &model);
 
+// display
+SegDisp seg_disp;
 
 //MultiSerial mSerial1 = MultiSerial(CS_PIN,1); //NMEA4
 //Autopilot
@@ -438,6 +441,9 @@ void setup()
 // The loop function is called in an endless loop
 void loop()
 {
+	/* this is a raster display so needs refreshing */
+	seg_disp.tick_event(8888);
+
 	/* tickle the process queue */
 	if (false == proc_queue.isEmpty())
 	{
