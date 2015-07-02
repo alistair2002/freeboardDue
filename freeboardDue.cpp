@@ -338,12 +338,36 @@ void process(char *s, char parser)
 											nmea_command_process_table, DIM(nmea_command_process_table));
 
 			if (save) model.saveConfig();
-		} 
-		else 
+		}
+		else if (*s == '$')
 		{
 			nmea_model.parse_nmea(s);
-			// callout_process_handler( key + 1, val, checksum,
-			// 						 nmea_event_process_table, DIM(nmea_event_process_table));
+		}
+		else
+		{
+			char *pair = strtok(s, ",");
+
+			while (pair)
+			{
+				if (strlen(pair) > 5)
+				{
+					if (':' == pair[3])
+					{
+						char key[4] = {};
+						char *val = pair + 4;
+						
+						memcpy(key, pair, 3);
+						key[3] = '\0';
+
+						//!!!VER:1.9,MGX:555,MGY:-51,MGZ:139,MGH:2.79,TOW:582655000***
+						callout_process_handler( key, val, checksum,
+												 nmea_event_process_table, DIM(nmea_event_process_table));
+					}
+				}
+				
+				/* find next set */
+				pair = strtok(NULL, ",");
+			}
 		}
 	}
 }
@@ -371,8 +395,6 @@ void setup()
 	}
 
 	Serial1.begin(model.getSerialBaud1());
-	Serial1.print("#FBO\r\n");
-//	Serial1.print("#GPX\r\n");
 
 #ifdef seatalk
 	if (model.getSeaTalk()) {
@@ -441,8 +463,10 @@ void setup()
 // The loop function is called in an endless loop
 void loop()
 {
+	//HDM_T *magnetic_heading = nmea_model.get_HDM();
+	
 	/* this is a raster display so needs refreshing */
-	seg_disp.tick_event(8888);
+	seg_disp.tick_event((int)model.getMagneticHeading());//(int)magnetic_heading->heading);
 
 	/* tickle the process queue */
 	if (false == proc_queue.isEmpty())
@@ -461,6 +485,8 @@ void loop()
 			//do these every 100ms
 //			autopilot.calcAutoPilot();
 			if (interval % 2 == 0) {
+				
+				Serial.print((int)model.getMagneticHeading());
 				//do every 200ms
 				wind.calcWindSpeedAndDir();
 

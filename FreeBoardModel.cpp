@@ -122,7 +122,7 @@ FreeBoardModel::FreeBoardModel() {
 	config.windZeroOffset = 0;
 	//ver6
 	config.gpsModel = GPS_EM_406A;
-	config.serialBaud = 38400l;
+	config.serialBaud = 9600l;
 	config.serialBaud1 = 38400l;
 	config.serialBaud2 = 9600l; //seatalk?
 	config.serialBaud3 = 9600l; //16 bytes
@@ -761,7 +761,14 @@ void FreeBoardModel::setGpsUtc(float gpsUtc) {
 }
 
 void FreeBoardModel::setMagneticHeading(float magneticHeading) {
-	this->magneticHeading = magneticHeading;
+	if (magneticHeading > 0)
+	{
+		this->magneticHeading = magneticHeading;
+	}
+	else
+	{
+		this->magneticHeading = 400;
+	}
 }
 
 void FreeBoardModel::setDeclination(float declination) {

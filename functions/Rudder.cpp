@@ -68,10 +68,10 @@ void Rudder::tick_event(void)
 
 		proc_queue->push(sentence);
 
-		{
-			char buffer[100];
-			sprintf(buffer, "adc (%d) angle (%d)", (int)analogRead(lvl2Pin), angle );
-			Serial.println(buffer);
-		}
+		// {
+		// 	char buffer[100];
+		// 	sprintf(buffer, "adc (%d) angle (%d)", (int)analogRead(lvl2Pin), angle );
+		// 	Serial.println(buffer);
+		// }
 	}
 }
