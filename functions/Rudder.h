@@ -32,12 +32,16 @@ public:
 	Rudder(SentenceQueue *freeQue, SentenceQueue *procQue);
 	virtual ~Rudder();
 	void tick_event(void);
+	int get_max_angle(void);
+	int get_min_angle(void);
 
 private:
 
+	int rudder_angle_min;
+	int rudder_angle_max;
+
 	SentenceQueue *free_queue;
 	SentenceQueue *proc_queue;
-
 };
 
 #endif /* RUDDER_H_ */

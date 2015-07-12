@@ -34,7 +34,9 @@
  
 #include "Rudder.h"
 
-Rudder::Rudder (SentenceQueue *freeQue, SentenceQueue *procQue)
+Rudder::Rudder (SentenceQueue *freeQue, SentenceQueue *procQue):
+	rudder_angle_min(-35),
+	rudder_angle_max(35)
 {
 	this->free_queue = freeQue;
 	this->proc_queue = procQue;
@@ -47,19 +49,45 @@ Rudder::~Rudder()
 
 }
 
+/* depending on wiring and resister usage these may change */
+/* be mindfull of where the port is, the potentiometer can be wired up differently */
+#define RUDDER_ADC_MAX 760
+#define RUDDER_ADC_MIN 2
+
+int Rudder::get_max_angle(void)
+{
+	return rudder_angle_max;
+}
+
+int Rudder::get_min_angle(void)
+{
+	return rudder_angle_min;
+}
+
+ /* this should be -1 if you have wired or connected the potentiometer such that port is the higher
+	value, port should be negative.  Clockwise and all that... */
+#define RUDDER_PORT_NEGATOR 1
+
 void Rudder::tick_event(void)
 {
 	char *sentence = free_queue->pop();
 	if (sentence)
 	{
-		/* read the ADC, normalise to 0-90 degrees */
-		int angle = (analogRead(lvl2Pin) * 90) / 1024;
+		/* read the ADC, normalise to 0-90 degrees, not so simple */
+		/* min 1 (port) max 760 (starboard) distributed over approx 90 degrees */
+		int rudder_adc = analogRead(lvl2Pin); /* value between MIN and MAX */
+		 /* distribute it to between -45 port to 45 starboard */
+		float angle = (((rudder_adc - RUDDER_ADC_MIN) * 90) / (RUDDER_ADC_MAX - RUDDER_ADC_MIN)) - 45;
+
+		/* correct if it is outside this range as it is possible */
+		if (rudder_adc < RUDDER_ADC_MIN){ angle = -45; }
+		else if (rudder_adc > RUDDER_ADC_MAX) {angle = 45; }
 
 		char crc_string[3] = {};
 		int crc = 0;
 
 		/* negative is turn to port, starboard helm */
-		sprintf(sentence, "$INRSA,%d.0,A,0.0,V*", (90 - angle) - 45);
+		sprintf(sentence, "$INRSA,%f,A,0.0,V*", (RUDDER_PORT_NEGATOR * angle));
 
 		crc = getChecksum( sentence );
 
@@ -70,7 +98,7 @@ void Rudder::tick_event(void)
 
 		// {
 		// 	char buffer[100];
-		// 	sprintf(buffer, "adc (%d) angle (%d)", (int)analogRead(lvl2Pin), angle );
+		// 	sprintf(buffer, "adc (%d) angle (%d)", (int)analogRead(lvl2Pin), (RUDDER_PORT_NEGATOR * angle) );
 		// 	Serial.println(buffer);
 		// }
 	}

@@ -40,7 +40,7 @@ public:
 
 	void init(void);		// to start the serial once the hardware is up
 
-	void setDesiredOffset( signed int angle );
+	void set_wanted( signed int angle );
 	void tick_event(void);
 	void speed_test_event(void);
 
@@ -54,7 +54,9 @@ private:
 
 	MultiSerial mSerial0;	//autopilot
 
+	bool correcting, correct_count;
 	double input, output, setpoint;	// the values tracked by the PID algorithm
+	unsigned int minimum_effort;    // don't bother unless it is a reasonable drive to the motor
 	PID correction;			// the PID algorithm that does fancy phase lock loop stuff
 };
 

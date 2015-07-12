@@ -3,8 +3,8 @@
 Rudder_PID::Rudder_PID(const Model *model):
 	baud(38400),
 	test_state(0),
-	mSerial0(CS_PIN,0),
-	input(0),output(0),setpoint(0),
+	mSerial0(CS_PIN,0),correcting(false), correct_count(0),
+	input(0),output(0),setpoint(0),minimum_effort(20),
 	correction(&this->input, &this->output, &this->setpoint, 2, 5, 1, DIRECT)
 {
 	/*don't try serial interaction here the board hasn't been set up */
@@ -15,8 +15,8 @@ void Rudder_PID::init()
 {
 	mSerial0.begin(this->baud);
 	correction.SetMode(AUTOMATIC);
-	correction.SetOutputLimits( -45, 45 );
-	correction.SetSampleTime( 500 ); /* we poll the tick every 500 ms */
+	correction.SetOutputLimits( -64, 64 ); /* define aggression */
+	correction.SetSampleTime( 100 ); /* we poll the tick every 100 ms */
 }
 
 Rudder_PID::~Rudder_PID()
@@ -24,10 +24,14 @@ Rudder_PID::~Rudder_PID()
 
 }
 
-void Rudder_PID::setDesiredOffset( signed int angle )
+void Rudder_PID::set_wanted( signed int angle )
 {
 	setpoint = (double)angle;
 	correction.SetMode(AUTOMATIC);
+
+	Serial.print(setpoint);
+	Serial.println(" Set Rudder Wanted");
+	correcting = true;
 }
 
 void Rudder_PID::tick_event(void)
@@ -38,77 +42,95 @@ void Rudder_PID::tick_event(void)
 	const HDM_T *compass = model->get_HDM();
 	const RMC_T *gps = model->get_RMC(); /* recommended minimum */
 
-	if (rudder)
+	if ((rudder) && (correcting))
 	{
 		/* motorspeed is relative 0-255 fast reverse to fast forward 127 being stop */
-		/* Simple maths would be take the current rudder position subtract it from the
-		   wanted one apply that scale of that difference to the value we give the 
-		   motor controller.  However this PID stuff is supposed to be shit hot and
-		   avoid overrun etc.  But it seems to be pwm based and more applicable to 
-		   speed controllers */
 
-		uint16_t motor_speed = (compass->heading ) + 127;
-		setpoint = compass->heading;
 		input = rudder->starboard;
 
-		if (motor_speed > 255) motor_speed = 255;
-
+		/* do that PID magic */
 		correction.Compute();
 
-		sprintf(buffer, "rudder %f compass (%f):%c cog %f speed (%d)", rudder->starboard, compass->heading, compass->magnetic, 
-				gps->dir, motor_speed);
+		sprintf(buffer, "rudder %f wanted (%f) output (%f) compass (%f):%c cog %f cc (%d)", rudder->starboard, setpoint, output,
+				compass->heading, compass->magnetic, gps->dir, correct_count);
 		
 		Serial.println( buffer );
 
-		//debug output to SyRen before wiring it up
-		sprintf(buffer, "speed (%d) offset (%d)", motor_speed, (signed int)motor_speed-127);
-		//mSerial0.print(buffer);
-		mSerial0.write( motor_speed );
+		if (abs(output) < minimum_effort) output = 0;
+
+		if (0 == output) {
+			correct_count++;
+
+			if (10 < correct_count)
+			{
+				correcting = false;
+				Serial.println("good enough >>>, stop messing about");
+			}
+		}
+		else {
+			correct_count = 0;
+		}
+		sprintf(buffer, "output (%f) abs(%f) min (%d)", output, abs(output), minimum_effort);
+		Serial.println(buffer);
+
+		mSerial0.write( (int)output + 127 );
 	}
 }
 
-/* make a number of sweeps, lock to lock -20 to 20 at different speeds */
-/* measure the time it takes to do these */ 
+/* this duplicates rudder max angle but it is only used in this test case */
+/* I don't want this class to be friends with the rudder class at the mo */
+#define RUDDER_MAX_HELM_PORT -35
+#define RUDDER_MAX_HELM_STBRD 35
+
+/* make a number of sweeps, lock to lock at different speeds */
+/* measure the time it takes to do these */
+/* a positive number drives the helm to starboard */
 void Rudder_PID::speed_test_event(void)
 {
 	int speeds[] = { -127, 127, -112, 112, -96, 96, -80, 80, -64, 64, -48, 48 };
 	const RSA_T *rudder = model->get_RSA();
-	// char buffer[100];
 
-	// sprintf(buffer, "r (%f) s (%d)", rudder->starboard, test_state);
-	// Serial.println(buffer);
+	// {
+	// 	char buffer[100];
 
-	/* start right most */
+	// 	sprintf(buffer, "r (%f) s (%d)", rudder->starboard, test_state);
+	// 	Serial.println(buffer);
+	// }
+
+	/* start with the helm to starboard */
 	if (0 == test_state)
 	{
-		if (rudder->starboard > -22)
+		if (rudder->starboard < RUDDER_MAX_HELM_STBRD)
 		{
 			int speed = 255;
-			/* reverse until rudder is hard to port */
+			/* until rudder is hard to starboard */
 			mSerial0.write( speed );
+			Serial.println("helm to starboard");
 		}
 		else
 		{
-			/* start the first test moving the rudder to starboard */
+			/* start the first test moving the helm to port */
 			mSerial0.write( speeds[test_state] + 127 );
 			test_time = millis();
 			test_state++;
+			Serial.println("helm to port");
 		}
 	}
 	else
 	{
-		/*if we have hit the edge, initially test_state = 1 moving to starboard */
-		if (((0x01 == (0x01 & test_state)) && ( rudder->starboard > 35)) ||
-			((0x00 == (0x01 & test_state)) && ( rudder->starboard < -22)))
+		/*if we have hit the edge, initially test_state = 1 moving helm to port */
+		if (((0x01 == (0x01 & test_state)) && ( rudder->starboard < RUDDER_MAX_HELM_PORT)) ||
+			((0x00 == (0x01 & test_state)) && ( rudder->starboard > RUDDER_MAX_HELM_STBRD)))
 		{
 			char buffer[100];
 				
-			sprintf(buffer, "test (%d) time (%d) rudder (%f)", test_state, (int)(millis() - test_time), rudder->starboard );
+			sprintf(buffer, "test (%d/%d) time (%d) rudder (%f)", test_state, DIM(speeds), (int)(millis() - test_time), rudder->starboard );
 			Serial.println(buffer);
 				
 			/* if we have done all of the tests */
-			if (test_state > DIM(speeds))
+			if (test_state >= DIM(speeds))
 			{
+				Serial.println("stop test");
 				mSerial0.write( 0 + 127 );
 			}
 			else

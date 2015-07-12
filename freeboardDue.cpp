@@ -110,7 +110,7 @@ void calculate() {
 	execute = true;
 	//we record the ping count out to 2 secs
 	interval++;
-	interval = interval % 20;
+	interval %= 20;
 }
 
 
@@ -165,6 +165,17 @@ void proc_AUTOPILOT_ADJUST(const char *val, unsigned int checksum)
 void proc_AUTOPILOT_SOURCE(const char *val, unsigned int checksum)
 {
 	model.setAutopilotReference(val[0]);
+}
+
+void proc_RUDDER_WANTED(const char *val, unsigned int checksum)
+{
+	int angle = atoi(val);
+
+	/* range checking */
+	if (angle > rudder.get_max_angle()) { angle = rudder.get_max_angle(); }
+	if (angle < rudder.get_min_angle()) { angle = rudder.get_min_angle(); }
+	
+	rudder_pid.set_wanted(angle);
 }
 
 void proc_WIND_SPEED_ALARM_STATE(const char *val, unsigned int checksum)
@@ -249,7 +260,21 @@ void proc_SEATALK(const char *val, unsigned int checksum)
 	
 void proc_MGH(const char *val, unsigned int checksum)
 {
+	char *sentence = free_queue.pop();
 	model.setMagneticHeading(atof(val));
+
+	if (sentence)
+	{
+		char crc_string[3] = {};
+		int crc = 0;
+
+		sprintf(sentence, "$HCHDM,%f,M*", atof(val));
+		crc = getChecksum(sentence);
+		sprintf(crc_string, "%2.2x", crc);
+		strcat(sentence, crc_string);
+
+		proc_queue.push(sentence);
+	}
 }
 
 void proc_DECL(const char *val, unsigned int checksum) 
@@ -269,28 +294,29 @@ void proc_WDT(const char *val, unsigned int checksum)
 }
 
 nmea_process_table nmea_command_process_table[] = {
-	{"#AAX", true, proc_ANCHOR_ALARM_STATE},
-	{"#AAN", true, proc_ANCHOR_ALARM_LAT},
-	{"#AAE", true, proc_ANCHOR_ALARM_LON},
-	{"#APX", false, proc_AUTOPILOT_STATE},
-	{"#APJ", false, proc_AUTOPILOT_ADJUST},
-	{"#APS", false, proc_AUTOPILOT_SOURCE},
-	{"#WSX", true, proc_WIND_SPEED_ALARM_STATE},
-	{"#WSK", true, proc_WIND_ALARM_KNOTS},
-	{"#WZJ", true, proc_WIND_ZERO_ADJUST},
-	{"#LU1", true, proc_LEVEL1_UPPER_ALARM},
-	{"#LL1", true, proc_LEVEL1_LOWER_ALARM},
-	{"#LU2", true, proc_LEVEL2_UPPER_ALARM},
-	{"#LL2", true, proc_LEVEL2_LOWER_ALARM},
-	{"#LU3", true, proc_LEVEL3_UPPER_ALARM},
-	{"#LL3", true, proc_LEVEL3_LOWER_ALARM},
-	{"#LL3", true, proc_CONFIG},
-	{"#GPS", true, proc_GPS_MODEL},
-	{"#SB0", true, proc_SERIAL_BAUD0},
-	{"#SB1", true, proc_SERIAL_BAUD1},
-	{"#SB2", true, proc_SERIAL_BAUD2},
-	{"#SB3", true, proc_SERIAL_BAUD3},
-	{"#STK", true, proc_SEATALK},
+	{"AAX", true, proc_ANCHOR_ALARM_STATE},
+	{"AAN", true, proc_ANCHOR_ALARM_LAT},
+	{"AAE", true, proc_ANCHOR_ALARM_LON},
+	{"APX", false, proc_AUTOPILOT_STATE},
+	{"APJ", false, proc_AUTOPILOT_ADJUST},
+	{"APS", false, proc_AUTOPILOT_SOURCE},
+	{"RWA", false, proc_RUDDER_WANTED},
+	{"WSX", true, proc_WIND_SPEED_ALARM_STATE},
+	{"WSK", true, proc_WIND_ALARM_KNOTS},
+	{"WZJ", true, proc_WIND_ZERO_ADJUST},
+	{"LU1", true, proc_LEVEL1_UPPER_ALARM},
+	{"LL1", true, proc_LEVEL1_LOWER_ALARM},
+	{"LU2", true, proc_LEVEL2_UPPER_ALARM},
+	{"LL2", true, proc_LEVEL2_LOWER_ALARM},
+	{"LU3", true, proc_LEVEL3_UPPER_ALARM},
+	{"LL3", true, proc_LEVEL3_LOWER_ALARM},
+	{"LL3", true, proc_CONFIG},
+	{"GPS", true, proc_GPS_MODEL},
+	{"SB0", true, proc_SERIAL_BAUD0},
+	{"SB1", true, proc_SERIAL_BAUD1},
+	{"SB2", true, proc_SERIAL_BAUD2},
+	{"SB3", true, proc_SERIAL_BAUD3},
+	{"STK", true, proc_SEATALK},
 };
 
 nmea_process_table nmea_event_process_table[] = {
@@ -309,7 +335,7 @@ bool callout_process_handler( const char *key, const char *val, unsigned int che
 
 	for(i=0; i< table_size;i++)
 	{
-		if ( 0 == strcmp( key, table[i].key ))
+		if ( 0 == strcmp( key, table[i].key))
 		{
 			table[i].fn(val, checksum);
 			break;
@@ -323,7 +349,6 @@ void process(char *s, char parser)
 	/* calculate the checksum before we start tokenising the string */
 	unsigned int checksum = (int)getChecksum( s );
 
-
 	if (s != NULL && strlen(s) > 3)
 	{
 		if (*s == '#') 
@@ -331,10 +356,10 @@ void process(char *s, char parser)
 			bool save = false;
 
 			/* break the string down, nb strtok is not threadsafe but we dont have threads */
-			char *key = strtok(s, ",");
+			char *key = strtok(s, ":");
 			char *val = strtok(NULL, ",");
 
-			save = callout_process_handler( key + 1, val, checksum,
+			save = callout_process_handler( key+1, val, checksum,
 											nmea_command_process_table, DIM(nmea_command_process_table));
 
 			if (save) model.saveConfig();
@@ -463,12 +488,12 @@ void setup()
 // The loop function is called in an endless loop
 void loop()
 {
-	//HDM_T *magnetic_heading = nmea_model.get_HDM();
+	HDM_T *magnetic_heading = nmea_model.get_HDM();
 	
 	/* this is a raster display so needs refreshing */
-	seg_disp.tick_event((int)model.getMagneticHeading());//(int)magnetic_heading->heading);
+	seg_disp.tick_event((int)magnetic_heading->heading);
 
-	/* tickle the process queue */
+		/* tickle the process queue */
 	if (false == proc_queue.isEmpty())
 	{
 		char *sentence = proc_queue.pop();
@@ -480,43 +505,42 @@ void loop()
 	}
 
 //Add your repeated code here
-	if (execute) {
-			//timer ping
-			//do these every 100ms
-//			autopilot.calcAutoPilot();
-			if (interval % 2 == 0) {
+	if (execute) /* every 100ms */ {
+
+		/* The correction of the rudder is fast as we are 
+		   correcting the motor.  Requests to position it slower */
+		rudder.tick_event();
+		rudder_pid.tick_event();
+
+		if (interval % 2 == 0) {
 				
-				Serial.print((int)model.getMagneticHeading());
-				//do every 200ms
-				wind.calcWindSpeedAndDir();
+			//do every 200ms
+			wind.calcWindSpeedAndDir();
 
-				rudder.tick_event();
-//				rudder_pid.tick_event();
-				rudder_pid.speed_test_event();
-
-			}
-			if (interval % 50 == 0) {
-				//do every 500ms
-				wind.calcWindSpeedAndDir();
-				wind.calcWindData();
-				//nmea.printWindNmea();
-				//fire any alarms
-				alarm.checkAlarms();
-				//model.writeSimple(Serial);
-			}
-			if (interval % 100 == 0) {
-
-				//Serial.println(freeMemory());
-				//do every 1000ms
-//				anchor.checkAnchor();
-				alarm.checkWindAlarm();
-				alarm.checkLvlAlarms();
-				//nmea.printTrueHeading();
-
-			}
-
-			execute = false;
 		}
+
+		if (interval % 50 == 0) {
+			//do every 500ms
+			wind.calcWindSpeedAndDir();
+			wind.calcWindData();
+			//nmea.printWindNmea();
+			//fire any alarms
+			alarm.checkAlarms();
+			//model.writeSimple(Serial);
+		}
+
+		if (interval % 100 == 0) {
+
+			//do every 1000ms
+//			anchor.checkAnchor();
+			alarm.checkWindAlarm();
+			alarm.checkLvlAlarms();
+			//nmea.printTrueHeading();
+
+		}
+
+		execute = false;
+	}
 }
 
 
@@ -544,6 +568,9 @@ byte getChecksum(char* str)
  response.  Multiple bytes of data may be available.
 
  See http://joost.damad.be/2012/01/arduino-mega-and-multiple-hardware.html
+
+ NB these expect a CR/LF to end the sentence
+
  */
 void serialEvent() {
 	while (Serial.available()) {
