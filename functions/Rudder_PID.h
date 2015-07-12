@@ -54,7 +54,8 @@ private:
 
 	MultiSerial mSerial0;	//autopilot
 
-	bool correcting, correct_count;
+	bool correcting;
+	unsigned int correct_count;		// count of stability before we give up and say good enough
 	double input, output, setpoint;	// the values tracked by the PID algorithm
 	unsigned int minimum_effort;    // don't bother unless it is a reasonable drive to the motor
 	PID correction;			// the PID algorithm that does fancy phase lock loop stuff

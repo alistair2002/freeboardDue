@@ -1,5 +1,10 @@
 #include "Rudder_PID.h"
 
+/* this duplicates rudder max angle but it is only used in this test case */
+/* I don't want this class to be friends with the rudder class at the mo */
+#define RUDDER_MAX_HELM_PORT -35
+#define RUDDER_MAX_HELM_STBRD 35
+
 Rudder_PID::Rudder_PID(const Model *model):
 	baud(38400),
 	test_state(0),
@@ -39,8 +44,8 @@ void Rudder_PID::tick_event(void)
 	char buffer[124];
 
 	const RSA_T *rudder = model->get_RSA();
-	const HDM_T *compass = model->get_HDM();
-	const RMC_T *gps = model->get_RMC(); /* recommended minimum */
+	//const HDM_T *compass = model->get_HDM();
+	//const RMC_T *gps = model->get_RMC(); /* recommended minimum */
 
 	if ((rudder) && (correcting))
 	{
@@ -51,36 +56,39 @@ void Rudder_PID::tick_event(void)
 		/* do that PID magic */
 		correction.Compute();
 
-		sprintf(buffer, "rudder %f wanted (%f) output (%f) compass (%f):%c cog %f cc (%d)", rudder->starboard, setpoint, output,
-				compass->heading, compass->magnetic, gps->dir, correct_count);
+		sprintf(buffer, "rudder %f wanted (%f) output (%f) (%d)", input, setpoint, output, correct_count);
 		
 		Serial.println( buffer );
 
+		/* correct for minimal effort */
 		if (abs(output) < minimum_effort) output = 0;
 
-		if (0 == output) {
-			correct_count++;
+		/* never instruct the motor to exceed maximum helm positions, stop the motor and wait
+		   for the PID algorithm to realise its error */ 
+		if ((input < RUDDER_MAX_HELM_PORT) ||
+			(input > RUDDER_MAX_HELM_STBRD))
+		{
+			/* instruct the motor to do nothing */
+			mSerial0.write( 127 );
+		}
+		else
+		{
+			/* instruct the motor to do something or nothing */
+			mSerial0.write( (int)output + 127 );
+		}
 
-			if (10 < correct_count)
-			{
-				correcting = false;
-				Serial.println("good enough >>>, stop messing about");
-			}
+		/* if we think we have attained the rudder position stay there until asked again */
+		if (0 == output) {
+			
+			if (10 < ++correct_count) { correcting = false; }
 		}
 		else {
+
 			correct_count = 0;
 		}
-		sprintf(buffer, "output (%f) abs(%f) min (%d)", output, abs(output), minimum_effort);
-		Serial.println(buffer);
 
-		mSerial0.write( (int)output + 127 );
 	}
 }
-
-/* this duplicates rudder max angle but it is only used in this test case */
-/* I don't want this class to be friends with the rudder class at the mo */
-#define RUDDER_MAX_HELM_PORT -35
-#define RUDDER_MAX_HELM_STBRD 35
 
 /* make a number of sweeps, lock to lock at different speeds */
 /* measure the time it takes to do these */
