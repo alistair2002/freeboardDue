@@ -41,6 +41,9 @@ public:
 	void init(void);		// to start the serial once the hardware is up
 
 	void set_wanted( signed int angle );
+	void set_PID_proportional( unsigned int p );
+	void set_PID_integral( unsigned int i );
+	void set_PID_derivative( unsigned int d );
 	void tick_event(void);
 	void speed_test_event(void);
 

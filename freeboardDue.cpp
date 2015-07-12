@@ -29,8 +29,7 @@
 
 using namespace stream_json_reader;
 
-volatile boolean execute = false;
-volatile int interval = 0;
+volatile boolean timer_execute = false;
 
 //freeboard model
 FreeBoardModel model;
@@ -107,10 +106,7 @@ SegDisp seg_disp;
  */
 void calculate() {
 	//we create 100ms pings here
-	execute = true;
-	//we record the ping count out to 2 secs
-	interval++;
-	interval %= 20;
+	timer_execute = !timer_execute;
 }
 
 
@@ -488,12 +484,57 @@ void setup()
 // The loop function is called in an endless loop
 void loop()
 {
+	/* avoid writing to a faster process we toggle a flag we
+	   execute on an edge and remember whether we are up or down */
+	static bool loop_execute = false;
+	static int execute_interval = 0;
+
+	/* things that need tickling alot to keep happy */
 	HDM_T *magnetic_heading = nmea_model.get_HDM();
 	
-	/* this is a raster display so needs refreshing */
+	/* this is a raster display so needs refreshing, makes a cool watchdog */
 	seg_disp.tick_event((int)magnetic_heading->heading);
 
-		/* tickle the process queue */
+//Add your repeated code here
+	if (loop_execute != timer_execute) /* edge every 100ms */ {
+		loop_execute = timer_execute;
+		execute_interval++;
+		
+		/* The correction of the rudder is fast as we are 
+		   correcting the motor.  Requests to position it slower */
+		rudder.tick_event();
+		rudder_pid.tick_event();
+
+		if (execute_interval % 2 == 0) {
+			//do every 200ms
+			//wind.calcWindSpeedAndDir();
+			char buffer[124];/* be careful of this as it is only 9600 baud and shouldn't overflow ;-) */
+			const RSA_T *rudder = nmea_model.get_RSA();
+
+ 			sprintf(buffer, "$HDM:%f,RSA:%f,HDW:%f", magnetic_heading->heading, rudder->starboard, 90);
+			Serial.println(buffer);
+		}
+
+		// if (execute_interval % 5 == 0) {
+		// 	//do every 500ms
+		// 	wind.calcWindSpeedAndDir();
+		// 	wind.calcWindData();
+		// 	//nmea.printWindNmea();
+		// 	//fire any alarms
+		// 	alarm.checkAlarms();
+		// 	//model.writeSimple(Serial);
+		// }
+
+		if (execute_interval % 10 == 0) {
+			execute_interval = 0;
+			//do every 1000ms
+//			anchor.checkAnchor();
+//			alarm.checkWindAlarm();
+//			alarm.checkLvlAlarms();
+		}
+	}
+
+	/* tickle the process queue */
 	if (false == proc_queue.isEmpty())
 	{
 		char *sentence = proc_queue.pop();
@@ -502,44 +543,6 @@ void loop()
 			process(sentence, ',');
 			free_queue.push(sentence);
 		}
-	}
-
-//Add your repeated code here
-	if (execute) /* every 100ms */ {
-
-		/* The correction of the rudder is fast as we are 
-		   correcting the motor.  Requests to position it slower */
-		rudder.tick_event();
-		rudder_pid.tick_event();
-
-		if (interval % 2 == 0) {
-				
-			//do every 200ms
-			wind.calcWindSpeedAndDir();
-
-		}
-
-		if (interval % 50 == 0) {
-			//do every 500ms
-			wind.calcWindSpeedAndDir();
-			wind.calcWindData();
-			//nmea.printWindNmea();
-			//fire any alarms
-			alarm.checkAlarms();
-			//model.writeSimple(Serial);
-		}
-
-		if (interval % 100 == 0) {
-
-			//do every 1000ms
-//			anchor.checkAnchor();
-			alarm.checkWindAlarm();
-			alarm.checkLvlAlarms();
-			//nmea.printTrueHeading();
-
-		}
-
-		execute = false;
 	}
 }
 

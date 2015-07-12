@@ -21,7 +21,7 @@ void Rudder_PID::init()
 {
 	mSerial0.begin(this->baud);
 	correction.SetMode(AUTOMATIC);
-	correction.SetOutputLimits( -64, 64 ); /* define aggression */
+	correction.SetOutputLimits( -100, 100 ); /* define aggression */
 	correction.SetSampleTime( 100 ); /* we poll the tick every 100 ms */
 }
 
@@ -34,20 +34,31 @@ void Rudder_PID::set_wanted( signed int angle )
 {
 	setpoint = (double)angle;
 	correction.SetMode(AUTOMATIC);
-
-	Serial.print(setpoint);
-	Serial.println(" Set Rudder Wanted");
 	correct_count = 0;
 }
 
-void Rudder_PID::set_PID_proportional( signed int p )
+void Rudder_PID::set_PID_proportional( unsigned int p )
 {
+	proportional = p;
+	correction.SetTunings(proportional, integral, derivative);
 }
+
+void Rudder_PID::set_PID_integral( unsigned int i )
+{
+	integral = i;
+	correction.SetTunings(proportional, integral, derivative);
+}
+
+void Rudder_PID::set_PID_derivative( unsigned int d )
+{
+	derivative = d;
+	correction.SetTunings(proportional, integral, derivative);
+}
+
+
 
 void Rudder_PID::tick_event(void)
 {
-	char buffer[124];
-
 	const RSA_T *rudder = model->get_RSA();
 	//const HDM_T *compass = model->get_HDM();
 	//const RMC_T *gps = model->get_RMC(); /* recommended minimum */
@@ -61,10 +72,12 @@ void Rudder_PID::tick_event(void)
 		/* do that PID magic */
 		correction.Compute();
 
-		sprintf(buffer, "rudder %f wanted (%f) output (%f) (%d)", input, setpoint, output, correct_count );
+		// {
+		// 	char buffer[124];
+		// 	sprintf(buffer, "rudder %f wanted (%f) output (%f) (%d)", input, setpoint, output, correct_count );
+		// 	Serial.println( buffer );
+		// }
 		
-		Serial.println( buffer );
-
 		/* correct for minimal effort */
 		if (abs(output) < minimum_effort) output = 0;
 
