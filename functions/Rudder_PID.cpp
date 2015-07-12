@@ -8,9 +8,10 @@
 Rudder_PID::Rudder_PID(const Model *model):
 	baud(38400),
 	test_state(0),
-	mSerial0(CS_PIN,0),correcting(false), correct_count(0),
-	input(0),output(0),setpoint(0),minimum_effort(20),
-	correction(&this->input, &this->output, &this->setpoint, 2, 5, 1, DIRECT)
+	mSerial0(CS_PIN,0), correct_count(0),
+	proportional(2), integral(5), derivative(1),
+	input(0),output(0),setpoint(0),minimum_effort(10),
+	correction(&this->input, &this->output, &this->setpoint, this->proportional, this->integral, this->derivative, DIRECT)
 {
 	/*don't try serial interaction here the board hasn't been set up */
 	this->model = model;
@@ -36,7 +37,11 @@ void Rudder_PID::set_wanted( signed int angle )
 
 	Serial.print(setpoint);
 	Serial.println(" Set Rudder Wanted");
-	correcting = true;
+	correct_count = 0;
+}
+
+void Rudder_PID::set_PID_proportional( signed int p )
+{
 }
 
 void Rudder_PID::tick_event(void)
@@ -47,7 +52,7 @@ void Rudder_PID::tick_event(void)
 	//const HDM_T *compass = model->get_HDM();
 	//const RMC_T *gps = model->get_RMC(); /* recommended minimum */
 
-	if ((rudder) && (correcting))
+	if ((rudder) && (AUTOMATIC == correction.GetMode()))
 	{
 		/* motorspeed is relative 0-255 fast reverse to fast forward 127 being stop */
 
@@ -56,7 +61,7 @@ void Rudder_PID::tick_event(void)
 		/* do that PID magic */
 		correction.Compute();
 
-		sprintf(buffer, "rudder %f wanted (%f) output (%f) (%d)", input, setpoint, output, correct_count);
+		sprintf(buffer, "rudder %f wanted (%f) output (%f) (%d)", input, setpoint, output, correct_count );
 		
 		Serial.println( buffer );
 
@@ -65,8 +70,8 @@ void Rudder_PID::tick_event(void)
 
 		/* never instruct the motor to exceed maximum helm positions, stop the motor and wait
 		   for the PID algorithm to realise its error */ 
-		if ((input < RUDDER_MAX_HELM_PORT) ||
-			(input > RUDDER_MAX_HELM_STBRD))
+		if (((input < RUDDER_MAX_HELM_PORT) && (output < 0)) ||
+			((input > RUDDER_MAX_HELM_STBRD) && (output > 0)))
 		{
 			/* instruct the motor to do nothing */
 			mSerial0.write( 127 );
@@ -80,7 +85,9 @@ void Rudder_PID::tick_event(void)
 		/* if we think we have attained the rudder position stay there until asked again */
 		if (0 == output) {
 			
-			if (10 < ++correct_count) { correcting = false; }
+			if (10 < ++correct_count) {
+				correction.SetMode(MANUAL);
+			}
 		}
 		else {
 
