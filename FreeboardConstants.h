@@ -86,7 +86,7 @@
 
 // define the maximum expected sentence length
 #define SENTENCE_POOL_SIZE 10
-#define MAX_SENTENCE_LENGTH 100
+#define MAX_SENTENCE_LENGTH 240 /* the gps string is longer than the allowed nmea standard oops */
 
 //freeboard model structs
 #define CONFIG_T 'C'

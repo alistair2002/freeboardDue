@@ -46,7 +46,12 @@ public:
 	void set_PID_derivative( unsigned int d );
 	void tick_event(void);
 	void speed_test_event(void);
+	void set_disable(void);
+	bool get_disabled(void);
 
+	const Model *getModel(void) { return this->model; }
+	void setInput(double input) { this->input = input; }
+	
 private:
 
 	const Model *model;		// read only reference to nmea model
@@ -54,6 +59,8 @@ private:
 
 	unsigned int test_state;
 	unsigned int test_time;
+
+	void set_input(void);
 
 	MultiSerial mSerial0;	//autopilot
 
@@ -63,5 +70,24 @@ private:
 	unsigned int minimum_effort;    // don't bother unless it is a reasonable drive to the motor
 	PID correction;			// the PID algorithm that does fancy phase lock loop stuff
 };
+
+class Compass_PID: public Rudder_PID {
+public:
+	Compass_PID( const Model *model);
+
+private:
+	void set_input(void);
+
+};
+
+class GPSBearing_PID: public Rudder_PID {
+public:
+	GPSBearing_PID( const Model *model);
+
+private:
+	void set_input(void);
+
+};
+	
 
 #endif

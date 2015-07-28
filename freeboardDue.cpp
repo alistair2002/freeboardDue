@@ -78,12 +78,74 @@ Model nmea_model;
 
 // bit that trys to keep the rudder pointing at the right offset
 Rudder_PID rudder_pid( &nmea_model );
+Compass_PID compass_pid ( &nmea_model );
+GPSBearing_PID bearing_pid ( &nmea_model );
 
 //Gps
 Gps gps(&gpsSource, &model);
 
 // display
 SegDisp seg_disp;
+
+class SegOutput {
+
+public:
+	
+	typedef enum {
+		SEG_OUTPUT_NONE,
+		SEG_OUTPUT_MAG,
+		SEG_OUTPUT_COG,
+		SEG_OUTPUT_MAX
+	}SegOutput_t;
+
+	SegOutput();
+	virtual ~SegOutput();
+	void choose(int output);
+	void tick();
+private:
+	SegOutput_t choice;
+};
+
+SegOutput::SegOutput() { choice = SEG_OUTPUT_MAG; }
+SegOutput::~SegOutput() {}
+void SegOutput::choose(int output)
+{
+	switch (output)
+	{
+		case 1:
+			choice = SEG_OUTPUT_MAG;
+			break;
+		default:
+			choice = SEG_OUTPUT_NONE;
+			break;
+	}
+}
+void SegOutput::tick()
+{
+	switch( choice )
+	{
+		case SEG_OUTPUT_MAG:
+		{
+			/* things that need tickling alot to keep happy */
+			HDM_T *magnetic_heading = nmea_model.get_HDM();
+	
+			/* this is a raster display so needs refreshing, makes a cool watchdog */
+			seg_disp.tick_event((int)magnetic_heading->heading);
+			break;
+		}
+		case SEG_OUTPUT_COG:
+		{
+			RMC_T *gps = nmea_model.get_RMC(); /* recommended minimum */
+			seg_disp.tick_event((int)gps->dir);
+			break;
+		}
+		case SEG_OUTPUT_NONE:
+		default:
+			break;
+	}
+}
+
+SegOutput bubble_disp;
 
 //MultiSerial mSerial1 = MultiSerial(CS_PIN,1); //NMEA4
 //Autopilot
@@ -161,6 +223,13 @@ void proc_AUTOPILOT_ADJUST(const char *val, unsigned int checksum)
 void proc_AUTOPILOT_SOURCE(const char *val, unsigned int checksum)
 {
 	model.setAutopilotReference(val[0]);
+}
+
+void proc_SEG_OUTPUT(const char *val, unsigned int checksum)
+{
+	int choice = atoi(val);
+
+	bubble_disp.choose(choice);
 }
 
 void proc_RUDDER_WANTED(const char *val, unsigned int checksum)
@@ -297,6 +366,7 @@ nmea_process_table nmea_command_process_table[] = {
 	{"APJ", false, proc_AUTOPILOT_ADJUST},
 	{"APS", false, proc_AUTOPILOT_SOURCE},
 	{"RWA", false, proc_RUDDER_WANTED},
+	{"OUT", false, proc_SEG_OUTPUT},
 	{"WSX", true, proc_WIND_SPEED_ALARM_STATE},
 	{"WSK", true, proc_WIND_ALARM_KNOTS},
 	{"WZJ", true, proc_WIND_ZERO_ADJUST},
@@ -489,11 +559,7 @@ void loop()
 	static bool loop_execute = false;
 	static int execute_interval = 0;
 
-	/* things that need tickling alot to keep happy */
-	HDM_T *magnetic_heading = nmea_model.get_HDM();
-	
-	/* this is a raster display so needs refreshing, makes a cool watchdog */
-	seg_disp.tick_event((int)magnetic_heading->heading);
+	bubble_disp.tick();
 
 //Add your repeated code here
 	if (loop_execute != timer_execute) /* edge every 100ms */ {
@@ -503,15 +569,19 @@ void loop()
 		/* The correction of the rudder is fast as we are 
 		   correcting the motor.  Requests to position it slower */
 		rudder.tick_event();
+		/* choose the rudder controller */
 		rudder_pid.tick_event();
 
 		if (execute_interval % 2 == 0) {
+			HDM_T *magnetic_heading = nmea_model.get_HDM();
+			RMC_T *gps_data = nmea_model.get_RMC(); // recommended minimum nav info
+
 			//do every 200ms
 			//wind.calcWindSpeedAndDir();
 			char buffer[124];/* be careful of this as it is only 9600 baud and shouldn't overflow ;-) */
 			const RSA_T *rudder = nmea_model.get_RSA();
 
- 			sprintf(buffer, "$HDM:%f,RSA:%f,HDW:%f", magnetic_heading->heading, rudder->starboard, 90);
+ 			sprintf(buffer, "$HDM:%f,RSA:%f,HDW:%f,SOG:%f", magnetic_heading->heading, rudder->starboard, gps_data->dir, gps_data->sog);
 			Serial.println(buffer);
 		}
 

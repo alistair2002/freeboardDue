@@ -55,19 +55,36 @@ void Rudder_PID::set_PID_derivative( unsigned int d )
 	correction.SetTunings(proportional, integral, derivative);
 }
 
+void Rudder_PID::set_disable(void)
+{
+	correction.SetMode(MANUAL);
+}
+
+bool Rudder_PID::get_disabled(void)
+{
+	return (AUTOMATIC == correction.GetMode())?false:true;
+}
+
+void Rudder_PID::set_input(void)
+{
+	const RSA_T *rudder = model->get_RSA();
+
+	if (rudder)
+	{
+		input = rudder->starboard;
+	}
+}
 
 
 void Rudder_PID::tick_event(void)
 {
-	const RSA_T *rudder = model->get_RSA();
-	//const HDM_T *compass = model->get_HDM();
-	//const RMC_T *gps = model->get_RMC(); /* recommended minimum */
 
-	if ((rudder) && (AUTOMATIC == correction.GetMode()))
+	if (AUTOMATIC == correction.GetMode())
 	{
 		/* motorspeed is relative 0-255 fast reverse to fast forward 127 being stop */
 
-		input = rudder->starboard;
+		/* set the error based on whatever this class is measuring */
+		set_input();
 
 		/* do that PID magic */
 		correction.Compute();
@@ -82,7 +99,7 @@ void Rudder_PID::tick_event(void)
 		if (abs(output) < minimum_effort) output = 0;
 
 		/* never instruct the motor to exceed maximum helm positions, stop the motor and wait
-		   for the PID algorithm to realise its error */ 
+		   for the PID algorithm to realise its error, or for the correction to take place */ 
 		if (((input < RUDDER_MAX_HELM_PORT) && (output < 0)) ||
 			((input > RUDDER_MAX_HELM_STBRD) && (output > 0)))
 		{
@@ -168,5 +185,28 @@ void Rudder_PID::speed_test_event(void)
 				test_state++;
 			}
 		}
+	}
+}
+
+Compass_PID::Compass_PID( const Model *model):Rudder_PID(model){/* just call parent constructor */};
+
+void Compass_PID::set_input(void)
+{
+	const HDM_T *compass = getModel()->get_HDM();
+
+	if (compass) {
+		setInput(compass->heading);
+	}
+}
+
+GPSBearing_PID::GPSBearing_PID( const Model *model):Rudder_PID(model){/* just call parent constructor */};
+
+void GPSBearing_PID::set_input(void)
+{
+	const RMC_T *gps = getModel()->get_RMC(); /* recommended minimum */
+
+	/* we only change the input if we are going fast enough to trust the COG */
+	if (gps && (2 < gps->sog)) {
+    	setInput(gps->dir);
 	}
 }
