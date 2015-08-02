@@ -60,7 +60,9 @@ private:
 	unsigned int test_state;
 	unsigned int test_time;
 
-	void set_input(void);
+	virtual void set_input(void);
+	int	 get_current(void);		// returns an approximation of current
+	bool over_current(void);	// returns true of we are consuming too much current for the given speed
 
 	MultiSerial mSerial0;	//autopilot
 
@@ -69,6 +71,14 @@ private:
 	double input, output, setpoint;	// the values tracked by the PID algorithm
 	unsigned int minimum_effort;    // don't bother unless it is a reasonable drive to the motor
 	PID correction;			// the PID algorithm that does fancy phase lock loop stuff
+};
+
+class Angle_PID: public Rudder_PID {
+public:
+	Angle_PID( const Model *model );
+
+private:
+	void set_input(void);
 };
 
 class Compass_PID: public Rudder_PID {

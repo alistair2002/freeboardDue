@@ -41,7 +41,7 @@ Rudder::Rudder (SentenceQueue *freeQue, SentenceQueue *procQue):
 	this->free_queue = freeQue;
 	this->proc_queue = procQue;
 
-	pinMode(lvl3Pin, INPUT);
+	pinMode(lvl2Pin, INPUT);
 }
 
 Rudder::~Rudder()
@@ -53,6 +53,40 @@ Rudder::~Rudder()
 /* be mindfull of where the port is, the potentiometer can be wired up differently */
 #define RUDDER_ADC_MAX 760
 #define RUDDER_ADC_MIN 2
+
+const int adc_steps[] = {
+	2,16,30,40,50,60,70,80,90,101,113,122,132,141,150,155,160,170,180,190,
+	200,210,220,230,240,255,270,281,293,303,314,326,339,347,356,367,378,388,398,406,
+	414,424,434,442,450,457,464,476,489,495,502,503,504,513,523,525,528,531,534,540,
+	547,552,558,560,562,571,581,586,592,600,608,616,624,630,636,641,647,652,657,659,
+	662,669,676,679,682,686,690,695,700,705
+}; /* 90 steps */  
+
+int division_find(int v, int min, int max)
+{
+	if (v < adc_steps[min]) {
+		return min -45;
+	} else if (v > adc_steps[max-1]) {
+		return max -45;
+	} else {
+
+		int median = min + (max - min)/2;
+		
+		while (median != min) {
+			if (v > adc_steps[median]) {
+				min = median;
+			}
+			else {
+				max = median;
+			}
+
+			/* reset a new median to be half way between our max and min */
+			median = min + (max - min)/2;
+		}
+
+		return (((adc_steps[max] - adc_steps[min])/2 + adc_steps[min]) > v)?(min -45):(max) - 45;
+	}	
+}
 
 int Rudder::get_max_angle(void)
 {
@@ -77,7 +111,8 @@ void Rudder::tick_event(void)
 		/* min 1 (port) max 760 (starboard) distributed over approx 90 degrees */
 		int rudder_adc = analogRead(lvl2Pin); /* value between MIN and MAX */
 		 /* distribute it to between -45 port to 45 starboard */
-		float angle = (((rudder_adc - RUDDER_ADC_MIN) * 90) / (RUDDER_ADC_MAX - RUDDER_ADC_MIN)) - 45;
+		float angle = division_find(rudder_adc, 0, (sizeof(adc_steps)/sizeof(adc_steps[0])));
+		//(((rudder_adc - RUDDER_ADC_MIN) * 90) / (RUDDER_ADC_MAX - RUDDER_ADC_MIN)) - 45;
 
 		/* correct if it is outside this range as it is possible */
 		if (rudder_adc < RUDDER_ADC_MIN){ angle = -45; }
@@ -97,9 +132,9 @@ void Rudder::tick_event(void)
 		proc_queue->push(sentence);
 
 		// {
-		// 	char buffer[100];
-		// 	sprintf(buffer, "adc (%d) angle (%d)", (int)analogRead(lvl2Pin), (RUDDER_PORT_NEGATOR * angle) );
-		// 	Serial.println(buffer);
+		//  	char buffer[100];
+		//  	sprintf(buffer, "adc (%d) angle (%d)", rudder_adc, (int)(RUDDER_PORT_NEGATOR * angle));
+		//  	Serial.println(buffer);
 		// }
 	}
 }

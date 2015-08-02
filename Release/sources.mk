@@ -1,6 +1,7 @@
 CPP_SRCS += \
 	functions/Rudder_PID.cpp \
 	functions/Rudder.cpp \
+	functions/SegOutput.cpp \
 	functions/SegDisp.cpp \
 	functions/Alarm.cpp \
 	functions/Anchor.cpp \

@@ -23,8 +23,7 @@
 #include "nmea_model.h"
 #include "Rudder.h"
 #include "Rudder_PID.h"
-#include "SegDisp.h"
-
+#include "SegOutput.h"
 #include <stdbool.h>
 
 using namespace stream_json_reader;
@@ -77,73 +76,14 @@ Wind wind(&model);
 Model nmea_model;
 
 // bit that trys to keep the rudder pointing at the right offset
-Rudder_PID rudder_pid( &nmea_model );
+Angle_PID angle_pid( &nmea_model );
 Compass_PID compass_pid ( &nmea_model );
-GPSBearing_PID bearing_pid ( &nmea_model );
+GPSBearing_PID gps_pid ( &nmea_model );
+
+Rudder_PID *current_pid = &angle_pid;
 
 //Gps
 Gps gps(&gpsSource, &model);
-
-// display
-SegDisp seg_disp;
-
-class SegOutput {
-
-public:
-	
-	typedef enum {
-		SEG_OUTPUT_NONE,
-		SEG_OUTPUT_MAG,
-		SEG_OUTPUT_COG,
-		SEG_OUTPUT_MAX
-	}SegOutput_t;
-
-	SegOutput();
-	virtual ~SegOutput();
-	void choose(int output);
-	void tick();
-private:
-	SegOutput_t choice;
-};
-
-SegOutput::SegOutput() { choice = SEG_OUTPUT_MAG; }
-SegOutput::~SegOutput() {}
-void SegOutput::choose(int output)
-{
-	switch (output)
-	{
-		case 1:
-			choice = SEG_OUTPUT_MAG;
-			break;
-		default:
-			choice = SEG_OUTPUT_NONE;
-			break;
-	}
-}
-void SegOutput::tick()
-{
-	switch( choice )
-	{
-		case SEG_OUTPUT_MAG:
-		{
-			/* things that need tickling alot to keep happy */
-			HDM_T *magnetic_heading = nmea_model.get_HDM();
-	
-			/* this is a raster display so needs refreshing, makes a cool watchdog */
-			seg_disp.tick_event((int)magnetic_heading->heading);
-			break;
-		}
-		case SEG_OUTPUT_COG:
-		{
-			RMC_T *gps = nmea_model.get_RMC(); /* recommended minimum */
-			seg_disp.tick_event((int)gps->dir);
-			break;
-		}
-		case SEG_OUTPUT_NONE:
-		default:
-			break;
-	}
-}
 
 SegOutput bubble_disp;
 
@@ -188,48 +128,102 @@ typedef struct {
 	const nmea_process_fn fn;
 } nmea_process_table;
 
-void proc_ANCHOR_ALARM_STATE( const char *val, unsigned int checksum )
-{
-	//if (DEBUG) Serial.print("AA Entered..");
-	model.setAnchorAlarmOn(atoi(val));
-	if (atoi(val) == 1) {
-//		anchor.setAnchorPoint();
-	}
-}
+// void proc_ANCHOR_ALARM_STATE( const char *val, unsigned int checksum )
+// {
+// 	//if (DEBUG) Serial.print("AA Entered..");
+// 	model.setAnchorAlarmOn(atoi(val));
+// 	if (atoi(val) == 1) {
+// //		anchor.setAnchorPoint();
+// 	}
+// }
 
-void proc_ANCHOR_ALARM_LAT( const char *val, unsigned int checksum )
-{
-	model.setAnchorLat(atof(val));
-}
+// void proc_ANCHOR_ALARM_LAT( const char *val, unsigned int checksum )
+// {
+// 	model.setAnchorLat(atof(val));
+// }
 
-void proc_ANCHOR_ALARM_LON( const char *val, unsigned int checksum )
-{
-	model.setAnchorLon(atof(val));
-}
-void proc_AUTOPILOT_STATE(const char *val, unsigned int checksum)
-{					
-	//if (DEBUG) Serial.print("AP Entered..");
-	//if (DEBUG) Serial.println(val);
-	//this is potentailly dangerous, since we dont want the boat diving off on an old target heading.
-	//in model we ALWAYS reset to current magnetic or wind heading at this point
-	model.setAutopilotOn(atoi(val));
-}
+// void proc_ANCHOR_ALARM_LON( const char *val, unsigned int checksum )
+// {
+// 	model.setAnchorLon(atof(val));
+// }
+// void proc_AUTOPILOT_STATE(const char *val, unsigned int checksum)
+// {					
+// 	//if (DEBUG) Serial.print("AP Entered..");
+// 	//if (DEBUG) Serial.println(val);
+// 	//this is potentailly dangerous, since we dont want the boat diving off on an old target heading.
+// 	//in model we ALWAYS reset to current magnetic or wind heading at this point
+// 	model.setAutopilotOn(atoi(val));
+// }
 
-void proc_AUTOPILOT_ADJUST(const char *val, unsigned int checksum)
-{
-	model.setAutopilotTargetHeading(model.getAutopilotTargetHeading() + atol(val));
-}
+// void proc_AUTOPILOT_ADJUST(const char *val, unsigned int checksum)
+// {
+// 	model.setAutopilotTargetHeading(model.getAutopilotTargetHeading() + atol(val));
+// }
 
-void proc_AUTOPILOT_SOURCE(const char *val, unsigned int checksum)
-{
-	model.setAutopilotReference(val[0]);
-}
+// void proc_AUTOPILOT_SOURCE(const char *val, unsigned int checksum)
+// {
+// 	model.setAutopilotReference(val[0]);
+// }
 
 void proc_SEG_OUTPUT(const char *val, unsigned int checksum)
 {
 	int choice = atoi(val);
 
 	bubble_disp.choose(choice);
+}
+
+void proc_PID_OFF(const char *val, unsigned int checksum)
+{
+	current_pid->set_disable();
+}
+
+void proc_PID_proportional(const char *val, unsigned int checksum)
+{
+	if (current_pid)
+	{
+		current_pid->set_PID_proportional((unsigned int)atoi(val));
+	}
+}
+
+void proc_PID_integral(const char *val, unsigned int checksum)
+{
+	if (current_pid)
+	{
+		current_pid->set_PID_integral((unsigned int)atoi(val));
+	}
+}
+void proc_PID_derivative(const char *val, unsigned int checksum)
+{
+	if (current_pid)
+	{
+		current_pid->set_PID_derivative((unsigned int)atoi(val));
+	}
+}
+
+void proc_COMPASS_WANTED_BEARING(const char *val, unsigned int checksum)
+{
+	int bearing = atoi(val)%360;
+
+	if (current_pid != &compass_pid)
+	{
+		current_pid->set_disable();
+		current_pid = &compass_pid;		
+	}
+
+	compass_pid.set_wanted(bearing);
+}
+								 
+void proc_GPS_WANTED_BEARING(const char *val, unsigned int checksum)
+{
+	int bearing = atoi(val)%360;
+
+	if (current_pid != &gps_pid)
+	{
+		current_pid->set_disable();
+		current_pid = &gps_pid;
+	}
+
+	gps_pid.set_wanted(bearing);
 }
 
 void proc_RUDDER_WANTED(const char *val, unsigned int checksum)
@@ -240,52 +234,58 @@ void proc_RUDDER_WANTED(const char *val, unsigned int checksum)
 	if (angle > rudder.get_max_angle()) { angle = rudder.get_max_angle(); }
 	if (angle < rudder.get_min_angle()) { angle = rudder.get_min_angle(); }
 	
-	rudder_pid.set_wanted(angle);
+	if (current_pid != &angle_pid)
+	{
+		current_pid->set_disable();
+		current_pid = &angle_pid;
+	}
+
+	angle_pid.set_wanted(angle);
 }
 
-void proc_WIND_SPEED_ALARM_STATE(const char *val, unsigned int checksum)
-{
-	model.setWindAlarmOn(atoi(val));
-}
+// void proc_WIND_SPEED_ALARM_STATE(const char *val, unsigned int checksum)
+// {
+// 	model.setWindAlarmOn(atoi(val));
+// }
 
-void proc_WIND_ALARM_KNOTS(const char *val, unsigned int checksum)
-{
-	model.setWindAlarmSpeed(atoi(val));
-}
+// void proc_WIND_ALARM_KNOTS(const char *val, unsigned int checksum)
+// {
+// 	model.setWindAlarmSpeed(atoi(val));
+// }
 
-void proc_WIND_ZERO_ADJUST(const char *val, unsigned int checksum) 
-{
-	model.setWindZeroOffset(atoi(val));
-}
+// void proc_WIND_ZERO_ADJUST(const char *val, unsigned int checksum) 
+// {
+// 	model.setWindZeroOffset(atoi(val));
+// }
 
-void proc_LEVEL1_UPPER_ALARM(const char *val, unsigned int checksum) 
-{
-	model.setLvl1UpperLimit(atoi(val));
-}
+// void proc_LEVEL1_UPPER_ALARM(const char *val, unsigned int checksum) 
+// {
+// 	model.setLvl1UpperLimit(atoi(val));
+// }
 
-void proc_LEVEL1_LOWER_ALARM(const char *val, unsigned int checksum)
-{
-	model.setLvl1LowerLimit(atoi(val));
-}
+// void proc_LEVEL1_LOWER_ALARM(const char *val, unsigned int checksum)
+// {
+// 	model.setLvl1LowerLimit(atoi(val));
+// }
 
-void proc_LEVEL2_UPPER_ALARM(const char *val, unsigned int checksum)
-{
-	model.setLvl2UpperLimit(atoi(val));
-}
+// void proc_LEVEL2_UPPER_ALARM(const char *val, unsigned int checksum)
+// {
+// 	model.setLvl2UpperLimit(atoi(val));
+// }
 
-void proc_LEVEL2_LOWER_ALARM(const char *val, unsigned int checksum) 
-{
-	model.setLvl2LowerLimit(atoi(val));
-}
+// void proc_LEVEL2_LOWER_ALARM(const char *val, unsigned int checksum) 
+// {
+// 	model.setLvl2LowerLimit(atoi(val));
+// }
 
-void proc_LEVEL3_UPPER_ALARM(const char *val, unsigned int checksum) 
-{
-	model.setLvl3UpperLimit(atoi(val));
-}
-void proc_LEVEL3_LOWER_ALARM(const char *val, unsigned int checksum) 
-{
-	model.setLvl3LowerLimit(atoi(val));
-}
+// void proc_LEVEL3_UPPER_ALARM(const char *val, unsigned int checksum) 
+// {
+// 	model.setLvl3UpperLimit(atoi(val));
+// }
+// void proc_LEVEL3_LOWER_ALARM(const char *val, unsigned int checksum) 
+// {
+// 	model.setLvl3LowerLimit(atoi(val));
+// }
 
 void proc_CONFIG(const char *val, unsigned int checksum) 
 {
@@ -359,23 +359,29 @@ void proc_WDT(const char *val, unsigned int checksum)
 }
 
 nmea_process_table nmea_command_process_table[] = {
-	{"AAX", true, proc_ANCHOR_ALARM_STATE},
-	{"AAN", true, proc_ANCHOR_ALARM_LAT},
-	{"AAE", true, proc_ANCHOR_ALARM_LON},
-	{"APX", false, proc_AUTOPILOT_STATE},
-	{"APJ", false, proc_AUTOPILOT_ADJUST},
-	{"APS", false, proc_AUTOPILOT_SOURCE},
+	// {"AAX", true, proc_ANCHOR_ALARM_STATE},
+	// {"AAN", true, proc_ANCHOR_ALARM_LAT},
+	// {"AAE", true, proc_ANCHOR_ALARM_LON},
+	// {"APX", false, proc_AUTOPILOT_STATE},
+	// {"APJ", false, proc_AUTOPILOT_ADJUST},
+	// {"APS", false, proc_AUTOPILOT_SOURCE},
+	{"OFF", false, proc_PID_OFF},
+	{"CWB", false, proc_COMPASS_WANTED_BEARING},
+	{"GWB", false, proc_GPS_WANTED_BEARING},
 	{"RWA", false, proc_RUDDER_WANTED},
 	{"OUT", false, proc_SEG_OUTPUT},
-	{"WSX", true, proc_WIND_SPEED_ALARM_STATE},
-	{"WSK", true, proc_WIND_ALARM_KNOTS},
-	{"WZJ", true, proc_WIND_ZERO_ADJUST},
-	{"LU1", true, proc_LEVEL1_UPPER_ALARM},
-	{"LL1", true, proc_LEVEL1_LOWER_ALARM},
-	{"LU2", true, proc_LEVEL2_UPPER_ALARM},
-	{"LL2", true, proc_LEVEL2_LOWER_ALARM},
-	{"LU3", true, proc_LEVEL3_UPPER_ALARM},
-	{"LL3", true, proc_LEVEL3_LOWER_ALARM},
+	{"PRO", false, proc_PID_proportional},
+	{"INT", false, proc_PID_integral},
+	{"DER", false, proc_PID_derivative},
+	// {"WSX", true, proc_WIND_SPEED_ALARM_STATE},
+	// {"WSK", true, proc_WIND_ALARM_KNOTS},
+	// {"WZJ", true, proc_WIND_ZERO_ADJUST},
+	// {"LU1", true, proc_LEVEL1_UPPER_ALARM},
+	// {"LL1", true, proc_LEVEL1_LOWER_ALARM},
+	// {"LU2", true, proc_LEVEL2_UPPER_ALARM},
+	// {"LL2", true, proc_LEVEL2_LOWER_ALARM},
+	// {"LU3", true, proc_LEVEL3_UPPER_ALARM},
+	// {"LL3", true, proc_LEVEL3_LOWER_ALARM},
 	{"LL3", true, proc_CONFIG},
 	{"GPS", true, proc_GPS_MODEL},
 	{"SB0", true, proc_SERIAL_BAUD0},
@@ -531,7 +537,9 @@ void setup()
 	//nmea.begin(model.getSerialBaud5());
 
 //		autopilot.init();
-	rudder_pid.init();
+	angle_pid.init();
+	compass_pid.init();
+	gps_pid.init();
 
 	//setup interrupts to windPins
 	if (DEBUG) Serial.println("Start wind..");
@@ -570,7 +578,11 @@ void loop()
 		   correcting the motor.  Requests to position it slower */
 		rudder.tick_event();
 		/* choose the rudder controller */
-		rudder_pid.tick_event();
+		if (current_pid)
+		{
+			current_pid->tick_event();
+		}
+		//angle_pid.speed_test_event();
 
 		if (execute_interval % 2 == 0) {
 			HDM_T *magnetic_heading = nmea_model.get_HDM();
