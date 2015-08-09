@@ -23,6 +23,7 @@
 #define SEGOUTPUT_H_
 
 #include "freeboardDue.h" /* definition of types */
+#include "Rudder_PID.h"   /* so it can determine current AMP draw */
 #include "nmea_model.h"
 #include "SegDisp.h"
 
@@ -34,10 +35,11 @@ public:
 		SEG_OUTPUT_NONE,
 		SEG_OUTPUT_MAG,
 		SEG_OUTPUT_COG,
+		SEG_OUTPUT_AMP,
 		SEG_OUTPUT_MAX
 	}SegOutput_t;
 
-	SegOutput();
+	SegOutput( Rudder_PID** current_PID );
 	virtual ~SegOutput();
 	void choose(int output);
 	void tick();
@@ -45,6 +47,7 @@ public:
 private:
 	
 	const Model *model;		// read only reference to nmea model
+	Rudder_PID **current_pid;
 
 	// display
 	SegDisp seg_disp;

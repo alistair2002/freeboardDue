@@ -1,6 +1,7 @@
 #include "SegOutput.h"
 
-SegOutput::SegOutput():choice(SEG_OUTPUT_MAG) {
+SegOutput::SegOutput(Rudder_PID** current_PID):current_pid(current_PID),
+											   choice(SEG_OUTPUT_MAG) {
 	this->model = model;
 }
 
@@ -12,6 +13,12 @@ void SegOutput::choose(int output)
 	{
 		case 1:
 			choice = SEG_OUTPUT_MAG;
+			break;
+		case 2:
+			choice = SEG_OUTPUT_COG;
+			break;
+		case 3:
+			choice = SEG_OUTPUT_AMP;
 			break;
 		default:
 			choice = SEG_OUTPUT_NONE;
@@ -35,6 +42,21 @@ void SegOutput::tick()
 		{
 			RMC_T *gps = model->get_RMC(); /* recommended minimum */
 			seg_disp.tick_event((int)gps->dir);
+			break;
+		}
+		case SEG_OUTPUT_AMP:
+		{
+			if (current_pid)
+			{
+				Rudder_PID *present_pid = (*current_pid);
+
+				if (present_pid)
+				{
+					/* this is all very confusing 'current' as in this and 'current' as in flow of electrickary */
+					int current = present_pid->get_current();
+					seg_disp.tick_event(current);
+				}
+			}
 			break;
 		}
 		case SEG_OUTPUT_NONE:

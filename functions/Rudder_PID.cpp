@@ -4,6 +4,7 @@
 /* I don't want this class to be friends with the rudder class at the mo */
 #define RUDDER_MAX_HELM_PORT -40
 #define RUDDER_MAX_HELM_STBRD 40
+#define INVALID_UNSIGNED_INT  ((unsigned int)~0)
 
 Rudder_PID::Rudder_PID(const Model *model):
 	baud(38400),
@@ -30,6 +31,11 @@ void Rudder_PID::init()
 Rudder_PID::~Rudder_PID()
 {
 
+}
+
+void Rudder_PID::set_input(void)
+{
+	input = 0;
 }
 
 int Rudder_PID::get_current(void)
@@ -65,12 +71,12 @@ bool Rudder_PID::over_current(void)
 		if (power <= comparison_table[i].request) {
 			overcurrent = (adc > comparison_table[i].current)?true:false;
 
-			if (overcurrent)
-			{
-				char buffer[124];
-				sprintf(buffer, "OVERCURRENT %d, %d, %d\n", power, adc, i);
-				Serial.println(buffer);
-			}
+			// if (overcurrent)
+			// {
+			// 	char buffer[124];
+			// 	sprintf(buffer, "OVERCURRENT %d, %d, %d\n", power, adc, i);
+			// 	Serial.println(buffer);
+			// }
 			break;
 		}
 	}
@@ -153,7 +159,9 @@ void Rudder_PID::tick_event(void)
 		/* if we think we have attained the rudder position stay there until asked again */
 		if (0 == output) {
 			
-			if (10 < ++correct_count) {
+			if ((INVALID_UNSIGNED_INT != stable_count) &&
+				(stable_count < ++correct_count)) {
+				//Serial.println("been good for so long I am giving up");
 				correction.SetMode(MANUAL);
 			}
 		}
@@ -242,7 +250,9 @@ void Angle_PID::set_input(void)
 	}
 }
 
-Compass_PID::Compass_PID( const Model *model):Rudder_PID(model){/* just call parent constructor */};
+Compass_PID::Compass_PID( const Model *model):Rudder_PID(model){
+	setStableCount(INVALID_UNSIGNED_INT);  /* max for unsigned value */
+};
 
 void Compass_PID::set_input(void)
 {
@@ -253,7 +263,9 @@ void Compass_PID::set_input(void)
 	}
 }
 
-GPSBearing_PID::GPSBearing_PID( const Model *model):Rudder_PID(model){/* just call parent constructor */};
+GPSBearing_PID::GPSBearing_PID( const Model *model):Rudder_PID(model){
+	setStableCount(INVALID_UNSIGNED_INT);  /* max for unsigned value */
+};
 
 void GPSBearing_PID::set_input(void)
 {

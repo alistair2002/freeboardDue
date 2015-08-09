@@ -48,9 +48,11 @@ public:
 	void speed_test_event(void);
 	void set_disable(void);
 	bool get_disabled(void);
+	int	 get_current(void);		// returns an approximation of current
 
 	const Model *getModel(void) { return this->model; }
 	void setInput(double input) { this->input = input; }
+	void setStableCount( unsigned int stable ) { this->stable_count = stable; }
 	
 private:
 
@@ -59,9 +61,9 @@ private:
 
 	unsigned int test_state;
 	unsigned int test_time;
+	unsigned int stable_count;	// how many times we are sufficiently close to the target to be stable
 
 	virtual void set_input(void);
-	int	 get_current(void);		// returns an approximation of current
 	bool over_current(void);	// returns true of we are consuming too much current for the given speed
 
 	MultiSerial mSerial0;	//autopilot

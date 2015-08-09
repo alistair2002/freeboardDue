@@ -85,7 +85,8 @@ Rudder_PID *current_pid = &angle_pid;
 //Gps
 Gps gps(&gpsSource, &model);
 
-SegOutput bubble_disp;
+// takes a pointer to the current pid so it can track changes
+SegOutput bubble_disp ( &current_pid );
 
 //MultiSerial mSerial1 = MultiSerial(CS_PIN,1); //NMEA4
 //Autopilot
