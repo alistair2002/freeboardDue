@@ -231,10 +231,6 @@ void proc_RUDDER_WANTED(const char *val, unsigned int checksum)
 {
 	int angle = atoi(val);
 
-	/* range checking */
-	if (angle > rudder.get_max_angle()) { angle = rudder.get_max_angle(); }
-	if (angle < rudder.get_min_angle()) { angle = rudder.get_min_angle(); }
-	
 	if (current_pid != &angle_pid)
 	{
 		current_pid->set_disable();
@@ -244,6 +240,13 @@ void proc_RUDDER_WANTED(const char *val, unsigned int checksum)
 	angle_pid.set_wanted(angle);
 }
 
+void proc_BEARING_WANTED_RELATIVE( const char *val, unsigned int checksum)
+{
+	if (current_pid)
+	{
+		current_pid->set_wanted_relative(atoi(val));
+	}
+}
 // void proc_WIND_SPEED_ALARM_STATE(const char *val, unsigned int checksum)
 // {
 // 	model.setWindAlarmOn(atoi(val));
@@ -370,6 +373,7 @@ nmea_process_table nmea_command_process_table[] = {
 	{"CWB", false, proc_COMPASS_WANTED_BEARING},
 	{"GWB", false, proc_GPS_WANTED_BEARING},
 	{"RWA", false, proc_RUDDER_WANTED},
+	{"BWR", false, proc_BEARING_WANTED_RELATIVE},
 	{"OUT", false, proc_SEG_OUTPUT},
 	{"PRO", false, proc_PID_proportional},
 	{"INT", false, proc_PID_integral},
@@ -585,7 +589,7 @@ void loop()
 		}
 		//angle_pid.speed_test_event();
 
-		if (execute_interval % 2 == 0) {
+		if (execute_interval % 5 == 0) {
 			HDM_T *magnetic_heading = nmea_model.get_HDM();
 			RMC_T *gps_data = nmea_model.get_RMC(); // recommended minimum nav info
 
@@ -593,8 +597,18 @@ void loop()
 			//wind.calcWindSpeedAndDir();
 			char buffer[124];/* be careful of this as it is only 9600 baud and shouldn't overflow ;-) */
 			const RSA_T *rudder = nmea_model.get_RSA();
+			int current = 0;
+			if (current_pid && (false == current_pid->get_disabled()))
+			{
+				if (current_pid == &angle_pid) {
+					current = 1;
+				} else if (current_pid == &compass_pid) {
+					current = 2;
+				} else { current = 3; }
+			}
 
- 			sprintf(buffer, "$HDM:%f,RSA:%f,HDW:%f,SOG:%f", magnetic_heading->heading, rudder->starboard, gps_data->dir, gps_data->sog);
+ 			sprintf(buffer, "$HDM:%f,RSA:%f,HDW:%f,SOG:%f,BWR:%d.%d",
+					magnetic_heading->heading, rudder->starboard,gps_data->dir, gps_data->sog, current_pid?current_pid->get_wanted():0, current);
 			Serial.println(buffer);
 		}
 

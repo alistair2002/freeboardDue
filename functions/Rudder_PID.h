@@ -40,7 +40,8 @@ public:
 
 	void init(void);		// to start the serial once the hardware is up
 
-	void set_wanted( signed int angle );
+	void set_wanted( signed int angle );	// virtual for range checking
+	void set_wanted_relative( signed int angle );   // added to the current if appropriate
 	void set_PID_proportional( unsigned int p );
 	void set_PID_integral( unsigned int i );
 	void set_PID_derivative( unsigned int d );
@@ -51,8 +52,9 @@ public:
 	int	 get_current(void);		// returns an approximation of current
 
 	const Model *getModel(void) { return this->model; }
-	void setInput(double input) { this->input = input; }
-	void setStableCount( unsigned int stable ) { this->stable_count = stable; }
+	int  get_wanted(void) { return this->setpoint; }
+	void set_input(double input) { this->input = input; }
+	void set_stable_count( unsigned int stable ) { this->stable_count = stable; }
 	
 private:
 
@@ -78,6 +80,7 @@ private:
 class Angle_PID: public Rudder_PID {
 public:
 	Angle_PID( const Model *model );
+	void set_wanted( signed int angle );
 
 private:
 	void set_input(void);

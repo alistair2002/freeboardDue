@@ -86,9 +86,14 @@ bool Rudder_PID::over_current(void)
 
 void Rudder_PID::set_wanted( signed int angle )
 {
-	setpoint = (double)angle;
+	setpoint = (double)(angle % 360);
 	correction.SetMode(AUTOMATIC);
 	correct_count = 0;
+}
+
+void Rudder_PID::set_wanted_relative( signed int angle )
+{
+	this->set_wanted(setpoint + (double)angle);
 }
 
 void Rudder_PID::set_PID_proportional( unsigned int p )
@@ -246,12 +251,21 @@ void Angle_PID::set_input(void)
 
 	if (rudder)
 	{
-		setInput(rudder->starboard);
+		Rudder_PID::set_input(rudder->starboard);
 	}
 }
 
+void Angle_PID::set_wanted( signed int angle )
+{
+	double wanted = (double)angle;
+	if (wanted < RUDDER_MAX_HELM_PORT) wanted = RUDDER_MAX_HELM_PORT;
+	else if (wanted > RUDDER_MAX_HELM_STBRD) wanted = RUDDER_MAX_HELM_STBRD;
+
+	Rudder_PID::set_wanted(wanted);
+}
+
 Compass_PID::Compass_PID( const Model *model):Rudder_PID(model){
-	setStableCount(INVALID_UNSIGNED_INT);  /* max for unsigned value */
+	set_stable_count(INVALID_UNSIGNED_INT);  /* max for unsigned value */
 };
 
 void Compass_PID::set_input(void)
@@ -259,12 +273,12 @@ void Compass_PID::set_input(void)
 	const HDM_T *compass = getModel()->get_HDM();
 
 	if (compass) {
-		setInput(compass->heading);
+		Rudder_PID::set_input(compass->heading);
 	}
 }
 
 GPSBearing_PID::GPSBearing_PID( const Model *model):Rudder_PID(model){
-	setStableCount(INVALID_UNSIGNED_INT);  /* max for unsigned value */
+	set_stable_count(INVALID_UNSIGNED_INT);  /* max for unsigned value */
 };
 
 void GPSBearing_PID::set_input(void)
@@ -273,6 +287,6 @@ void GPSBearing_PID::set_input(void)
 
 	/* we only change the input if we are going fast enough to trust the COG */
 	if (gps && (2 < gps->sog)) {
-    	setInput(gps->dir);
+		Rudder_PID::set_input(gps->dir);
 	}
 }
