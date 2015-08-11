@@ -9,7 +9,7 @@
 Rudder_PID::Rudder_PID(const Model *model):
 	baud(38400),
 	test_state(0),
-	mSerial0(CS_PIN,0), correct_count(0),
+	mSerial0(CS_PIN,0), correct_count(0), direction_multiplier(1),
 	proportional(2), integral(5), derivative(1),
 	input(0),output(0),setpoint(0),minimum_effort(10),
 	correction(&this->input, &this->output, &this->setpoint, this->proportional, this->integral, this->derivative, DIRECT)
@@ -84,6 +84,14 @@ bool Rudder_PID::over_current(void)
 	return overcurrent;
 }
 
+signed int Rudder_PID::get_corrected( signed int angle )
+{
+	/* if the setpoint is 90degrees then input should be of the 
+	   range -90 to 270 otherwise 380 will try to turn to starboard */
+	
+	return ((angle - setpoint) > 180)?angle-360:angle; 
+}
+
 void Rudder_PID::set_wanted( signed int angle )
 {
 	setpoint = (double)(angle % 360);
@@ -94,6 +102,7 @@ void Rudder_PID::set_wanted( signed int angle )
 void Rudder_PID::set_wanted_relative( signed int angle )
 {
 	this->set_wanted(setpoint + (double)angle);
+	correction.SetMode(AUTOMATIC);
 }
 
 void Rudder_PID::set_PID_proportional( unsigned int p )
@@ -129,6 +138,8 @@ void Rudder_PID::tick_event(void)
 
 	if (AUTOMATIC == correction.GetMode())
 	{
+		const RSA_T *rudder = getModel()->get_RSA();
+
 		/* motorspeed is relative 0-255 fast reverse to fast forward 127 being stop */
 
 		/* set the error based on whatever this class is measuring */
@@ -139,7 +150,7 @@ void Rudder_PID::tick_event(void)
 
 		// {
 		// 	char buffer[124];
-		// 	sprintf(buffer, "rudder %f wanted (%f) output (%f) (%d)", input, setpoint, output, correct_count );
+		// 	sprintf(buffer, "rudder %d, input %f setpoint (%f) output (%f) (%d)", (int)rudder->starboard, input, setpoint, output, correct_count );
 		// 	Serial.println( buffer );
 		// }
 		
@@ -148,8 +159,8 @@ void Rudder_PID::tick_event(void)
 
 		/* never instruct the motor to exceed maximum helm positions, stop the motor and wait
 		   for the PID algorithm to realise its error, or for the correction to take place */ 
-		if (((input < RUDDER_MAX_HELM_PORT) && (output < 0)) ||
-			((input > RUDDER_MAX_HELM_STBRD) && (output > 0)) ||
+		if (((rudder->starboard < RUDDER_MAX_HELM_PORT) && (output < 0)) ||
+			((rudder->starboard > RUDDER_MAX_HELM_STBRD) && (output > 0)) ||
 			( over_current() ))
 		{
 			/* instruct the motor to do nothing */
@@ -158,7 +169,7 @@ void Rudder_PID::tick_event(void)
 		else
 		{
 			/* instruct the motor to do something or nothing */
-			mSerial0.write( (int)output + 127 );
+			mSerial0.write( (int)(direction_multiplier * output) + 127 );
 		}
 
 		/* if we think we have attained the rudder position stay there until asked again */
@@ -174,7 +185,6 @@ void Rudder_PID::tick_event(void)
 
 			correct_count = 0;
 		}
-
 	}
 }
 
@@ -243,7 +253,9 @@ void Rudder_PID::speed_test_event(void)
 	}
 }
 
-Angle_PID::Angle_PID( const Model *model):Rudder_PID(model){/* just call parent constructor */};
+Angle_PID::Angle_PID( const Model *model):Rudder_PID(model){
+	set_stable_count(10);
+};
 
 void Angle_PID::set_input(void)
 {
@@ -266,6 +278,7 @@ void Angle_PID::set_wanted( signed int angle )
 
 Compass_PID::Compass_PID( const Model *model):Rudder_PID(model){
 	set_stable_count(INVALID_UNSIGNED_INT);  /* max for unsigned value */
+	set_direction(false);
 };
 
 void Compass_PID::set_input(void)
@@ -273,12 +286,13 @@ void Compass_PID::set_input(void)
 	const HDM_T *compass = getModel()->get_HDM();
 
 	if (compass) {
-		Rudder_PID::set_input(compass->heading);
+		Rudder_PID::set_input(get_corrected(compass->heading));
 	}
 }
 
 GPSBearing_PID::GPSBearing_PID( const Model *model):Rudder_PID(model){
 	set_stable_count(INVALID_UNSIGNED_INT);  /* max for unsigned value */
+	set_direction(false);
 };
 
 void GPSBearing_PID::set_input(void)
@@ -287,6 +301,13 @@ void GPSBearing_PID::set_input(void)
 
 	/* we only change the input if we are going fast enough to trust the COG */
 	if (gps && (2 < gps->sog)) {
-		Rudder_PID::set_input(gps->dir);
+		Rudder_PID::set_input(get_corrected(gps->dir));
+	}
+	else
+	{
+		/* if we are not going fast enough rely on the compass */
+		const HDM_T *compass = getModel()->get_HDM();
+
+		Rudder_PID::set_input(get_corrected(compass->heading));
 	}
 }

@@ -39,14 +39,14 @@ public:
 	~Rudder_PID();
 
 	void init(void);		// to start the serial once the hardware is up
+	void tick_event(void);
+	void speed_test_event(void);
 
 	void set_wanted( signed int angle );	// virtual for range checking
 	void set_wanted_relative( signed int angle );   // added to the current if appropriate
 	void set_PID_proportional( unsigned int p );
 	void set_PID_integral( unsigned int i );
 	void set_PID_derivative( unsigned int d );
-	void tick_event(void);
-	void speed_test_event(void);
 	void set_disable(void);
 	bool get_disabled(void);
 	int	 get_current(void);		// returns an approximation of current
@@ -55,6 +55,8 @@ public:
 	int  get_wanted(void) { return this->setpoint; }
 	void set_input(double input) { this->input = input; }
 	void set_stable_count( unsigned int stable ) { this->stable_count = stable; }
+	void set_direction( bool clockwise ) { this->direction_multiplier = (clockwise)?1:-1; }
+	signed int get_corrected( signed int input );
 	
 private:
 
@@ -71,6 +73,7 @@ private:
 	MultiSerial mSerial0;	//autopilot
 
 	unsigned int correct_count;		// count of stability before we give up and say good enough
+	int direction_multiplier;		// tiller to starboard to turn to port
 	int proportional, integral, derivative; // the tuning values for the PID algorithm
 	double input, output, setpoint;	// the values tracked by the PID algorithm
 	unsigned int minimum_effort;    // don't bother unless it is a reasonable drive to the motor
