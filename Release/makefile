@@ -5,13 +5,14 @@
 BUILD_DIR := $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 PROJECT_DIR := $(abspath $(BUILD_DIR)/..)
 PROJECT := $(notdir $(PROJECT_DIR))
-
+#ARM_TOOLS := $(ARDUINO_ROOT)/hardware/tools/gcc-arm-none-eabi-4.8.3-2014q1/bin
+ARM_TOOLS := /usr/bin
 -include ../makefile.init
 
 
 RM := rm -rf
-GCPP := $(ARDUINO_ROOT)/hardware/tools/gcc-arm-none-eabi-4.8.3-2014q1/bin/arm-none-eabi-g++
-GCC := $(ARDUINO_ROOT)/hardware/tools/gcc-arm-none-eabi-4.8.3-2014q1/bin/arm-none-eabi-gcc
+GCPP := $(ARM_TOOLS)/arm-none-eabi-g++
+GCC := $(ARM_TOOLS)/arm-none-eabi-gcc
 
 CPP_FLAGS := -c -g -Os -ffunction-sections -fdata-sections -nostdlib -fno-threadsafe-statics --param max-inline-insns-single=500 -fno-rtti -fno-exceptions -Dprintf=iprintf -mcpu=cortex-m3 -DF_CPU=84000000L -DARDUINO=158 -DARDUINO_SAM_DUE -DARDUINO_ARCH_SAM  -D__SAM3X8E__ -mthumb -DUSB_VID=0x2341 -DUSB_PID=0x003e -DUSBCON '-DUSB_MANUFACTURER="Unknown"' '-DUSB_PRODUCT="Arduino Due"'
 CC_FLAGS := -c -g -Os -ffunction-sections -fdata-sections -nostdlib --param max-inline-insns-single=500 -Dprintf=iprintf -mcpu=cortex-m3 -DF_CPU=84000000L -DARDUINO=158 -DARDUINO_SAM_DUE -DARDUINO_ARCH_SAM  -D__SAM3X8E__ -mthumb -DUSB_VID=0x2341 -DUSB_PID=0x003e -DUSBCON '-DUSB_MANUFACTURER="Unknown"' '-DUSB_PRODUCT="Arduino Due"' 
@@ -134,13 +135,13 @@ debug:
 freeboardDue: $(FLASH_IMAGE)
 	@echo 'Building target: $@'
 	@echo 'Printing size:'
-	"$(ARDUINO_ROOT)/hardware/tools/gcc-arm-none-eabi-4.8.3-2014q1/bin/arm-none-eabi-size" -A "$(PROJECT_DIR)/Release/freeboardDue.elf"
+	"$(ARM_TOOLS)/arm-none-eabi-size" -A "$(PROJECT_DIR)/Release/freeboardDue.elf"
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 $(AR): $(AR_OBJ)
 	@echo 'Starting archiver'
-	"$(ARDUINO_ROOT)/hardware/tools/gcc-arm-none-eabi-4.8.3-2014q1/bin/arm-none-eabi-ar" rcs  "$(PROJECT_DIR)/Release/arduino.ar"   $(AR_OBJ)
+	"$(ARM_TOOLS)/arm-none-eabi-ar" rcs  "$(PROJECT_DIR)/Release/arduino.ar"   $(AR_OBJ)
 	@echo 'Finished building: $@'
 	@echo ' '
 
@@ -165,7 +166,7 @@ freeboardDue.eep: $(ELF)
 
 freeboardDue.bin: $(EEP)
 	@echo 'Create Flash image (ihex format)'
-	"$(ARDUINO_ROOT)/hardware/tools/gcc-arm-none-eabi-4.8.3-2014q1/bin/arm-none-eabi-objcopy" -O binary  \
+	"$(ARM_TOOLS)/arm-none-eabi-objcopy" -O binary  \
 	"$(PROJECT_DIR)/Release/freeboardDue.elf" "$(PROJECT_DIR)/Release/freeboardDue.bin"
 	@echo 'Finished building: $@'
 	@echo ' '
