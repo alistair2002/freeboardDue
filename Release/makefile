@@ -18,10 +18,11 @@ CPP_FLAGS := -c -g -Os -ffunction-sections -fdata-sections -nostdlib -fno-thread
 CC_FLAGS := -c -g -Os -ffunction-sections -fdata-sections -nostdlib --param max-inline-insns-single=500 -Dprintf=iprintf -mcpu=cortex-m3 -DF_CPU=84000000L -DARDUINO=158 -DARDUINO_SAM_DUE -DARDUINO_ARCH_SAM  -D__SAM3X8E__ -mthumb -DUSB_VID=0x2341 -DUSB_PID=0x003e -DUSBCON '-DUSB_MANUFACTURER="Unknown"' '-DUSB_PRODUCT="Arduino Due"' 
 
 INCLUDES := \
-	-I"$(ARDUINO_ROOT)/hardware/arduino/sam/system/libsam" \
-	-I"$(ARDUINO_ROOT)/hardware/arduino/sam/system/CMSIS/CMSIS/Include/" \
-	-I"$(ARDUINO_ROOT)/hardware/arduino/sam/system/CMSIS/Device/ATMEL/" \
-	-I"$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino" \
+	-I"$(ARDUINO_ROOT)/variants/arduino_due_x" \
+	-I"$(ARDUINO_ROOT)/system/libsam" \
+	-I"$(ARDUINO_ROOT)/system/CMSIS/CMSIS/Include/" \
+	-I"$(ARDUINO_ROOT)/system/CMSIS/Device/ATMEL/" \
+	-I"$(ARDUINO_ROOT)/cores/arduino" \
 	-I"$(PROJECT_DIR)/lib/DueTimer" \
 	-I"$(PROJECT_DIR)/lib/Kangaroo" \
 	-I"$(PROJECT_DIR)/lib/SPI" \
@@ -32,12 +33,11 @@ INCLUDES := \
 	-I"$(PROJECT_DIR)/lib/AverageList" \
 	-I"$(PROJECT_DIR)/lib/PID_v1" \
 	-I"$(PROJECT_DIR)/lib/SevSeg" \
+	-I"$(PROJECT_DIR)/lib/QueueList" \
+	-I"$(PROJECT_DIR)/lib/DueFlashStorage" \
 	-I"$(PROJECT_DIR)/functions" \
 	-I"$(PROJECT_DIR)/model" \
-	-I"$(PROJECT_DIR)" \
-	-I"$(ARDUINO_ROOT)/hardware/arduino/sam/variants/arduino_due_x" \
-	-I"$(ARDUINO_ROOT)/libraries/QueueList" \
-	-I"$(ARDUINO_ROOT)/libraries/DueFlashStorage"
+	-I"$(PROJECT_DIR)"
 
 
 # All of the sources participating in the build are defined here
@@ -148,13 +148,13 @@ $(AR): $(AR_OBJ)
 freeboardDue.elf: $(PROJ_LINK_OBJ) $(ARDUINO_CPP_LINK_OBJ) $(ARDUINO_C_LINK_OBJ) $(AR)
 	@echo 'Starting combiner'
 	$(GCC) -Os -Wl,--gc-sections -mcpu=cortex-m3 \
-	-T$(ARDUINO_ROOT)/hardware/arduino/sam/variants/arduino_due_x/linker_scripts/gcc/flash.ld \
+	-T$(ARDUINO_ROOT)/variants/arduino_due_x/linker_scripts/gcc/flash.ld \
 	-Wl,-Map,$(PROJECT_DIR)/Release/freeboardDue.map  -o $(PROJECT_DIR)/Release/freeboardDue.elf \
 	-L$(PROJECT_DIR)/Release -mthumb -Wl,--cref -Wl,--check-sections \
 	-Wl,--gc-sections -Wl,--entry=Reset_Handler -Wl,--unresolved-symbols=report-all \
 	-Wl,--warn-common -Wl,--warn-section-align -Wl,--warn-unresolved-symbols -Wl,--start-group \
 	$(PROJ_LINK_OBJ) $(ARDUINO_CPP_LINK_OBJ) $(ARDUINO_C_LINK_OBJ) $(AR)  \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/variants/arduino_due_x/libsam_sam3x8e_gcc_rel.a $(AR) -Wl,--end-group -lm -gcc
+	$(ARDUINO_ROOT)/variants/arduino_due_x/libsam_sam3x8e_gcc_rel.a $(AR) -Wl,--end-group -lm -gcc
 	@echo 'Finished building: $@'
 	@echo ' '
 

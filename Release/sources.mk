@@ -62,45 +62,45 @@ CPP_SRCS += \
 CPP_SRCS += \
 	lib/DueTimer/DueTimer.cpp 
 
+CPP_SRCS += \
+	lib/DueFlashStorage/DueFlashStorage.cpp \
+	lib/DueFlashStorage/flash_efc.cpp \
+	lib/DueFlashStorage/efc.cpp
+
 ARDUINO_CPP_SRCS += \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/variants/arduino_due_x/variant.cpp 
+	$(ARDUINO_ROOT)/variants/arduino_due_x/variant.cpp 
 
 ARDUINO_C_SRCS += \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/avr/dtostrf.c 
+	$(ARDUINO_ROOT)/cores/arduino/avr/dtostrf.c 
 
 ARDUINO_CPP_SRCS += \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/USB/CDC.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/USB/HID.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/USB/USBCore.cpp 
+	$(ARDUINO_ROOT)/cores/arduino/USB/CDC.cpp \
+	$(ARDUINO_ROOT)/libraries/HID/HID.cpp \
+	$(ARDUINO_ROOT)/cores/arduino/USB/USBCore.cpp 
 
 ARDUINO_CPP_SRCS += \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/IPAddress.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/Print.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/Reset.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/RingBuffer.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/Stream.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/UARTClass.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/USARTClass.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/WMath.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/WString.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/abi.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/main.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/new.cpp \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/wiring_pulse.cpp 
+	$(ARDUINO_ROOT)/cores/arduino/IPAddress.cpp \
+	$(ARDUINO_ROOT)/cores/arduino/Print.cpp \
+	$(ARDUINO_ROOT)/cores/arduino/Reset.cpp \
+	$(ARDUINO_ROOT)/cores/arduino/RingBuffer.cpp \
+	$(ARDUINO_ROOT)/cores/arduino/Stream.cpp \
+	$(ARDUINO_ROOT)/cores/arduino/UARTClass.cpp \
+	$(ARDUINO_ROOT)/cores/arduino/USARTClass.cpp \
+	$(ARDUINO_ROOT)/cores/arduino/WMath.cpp \
+	$(ARDUINO_ROOT)/cores/arduino/WString.cpp \
+	$(ARDUINO_ROOT)/cores/arduino/abi.cpp \
+	$(ARDUINO_ROOT)/cores/arduino/main.cpp \
+	$(ARDUINO_ROOT)/cores/arduino/new.cpp \
+	$(ARDUINO_ROOT)/cores/arduino/wiring_pulse.cpp 
 
 ARDUINO_C_SRCS += \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/WInterrupts.c \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/cortex_handlers.c \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/hooks.c \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/iar_calls_sam3.c \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/itoa.c \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/syscalls_sam3.c \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/wiring.c \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/wiring_analog.c \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/wiring_digital.c \
-	$(ARDUINO_ROOT)/hardware/arduino/sam/cores/arduino/wiring_shift.c 
-
-ARDUINO_CPP_SRCS += \
-	$(ARDUINO_ROOT)/libraries/DueFlashStorage/DueFlashStorage.cpp \
-	$(ARDUINO_ROOT)/libraries/DueFlashStorage/flash_efc.cpp \
-	$(ARDUINO_ROOT)/libraries/DueFlashStorage/efc.cpp
+	$(ARDUINO_ROOT)/cores/arduino/WInterrupts.c \
+	$(ARDUINO_ROOT)/cores/arduino/cortex_handlers.c \
+	$(ARDUINO_ROOT)/cores/arduino/hooks.c \
+	$(ARDUINO_ROOT)/cores/arduino/iar_calls_sam3.c \
+	$(ARDUINO_ROOT)/cores/arduino/itoa.c \
+	$(ARDUINO_ROOT)/cores/arduino/syscalls_sam3.c \
+	$(ARDUINO_ROOT)/cores/arduino/wiring.c \
+	$(ARDUINO_ROOT)/cores/arduino/wiring_analog.c \
+	$(ARDUINO_ROOT)/cores/arduino/wiring_digital.c \
+	$(ARDUINO_ROOT)/cores/arduino/wiring_shift.c 
